@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-3">Admin Role Management</h3>
+<p class="text-secondary">Cari user berdasarkan email, lalu ubah role-nya.</p>
+
+<form class="row gy-2 gx-2 align-items-end mb-3" method="get">
+  <div class="col-12 col-md-6">
+    <label class="form-label">Search email</label>
+    <input class="form-control" type="text" name="q" placeholder="e.g. john@company.com" value="{{ q }}">
+  </div>
+  <div class="col-12 col-md-2 d-grid">
+    <button class="btn btn-primary"><i class="bi bi-search me-1"></i>Search</button>
+  </div>
+</form>
+
+{% if users is none %}
+<div class="alert alert-warning">
+  ⚠️ Database belum terkoneksi. Silakan atur di menu <a href="{{ url_for('db_settings') }}">Settings</a>.
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">Results</div>
+  <div class="table-responsive">
+    <table class="table table-dark table-striped align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Role</th>
+          <th style="width:240px">Change Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ u.email or u['email'] or '-' }}</td>
+          <td>{{ u.name or u['name'] or '-' }}</td>
+          <td><span class="badge text-bg-secondary">{{ u.role or u['role'] or 'user' }}</span></td>
+          <td>
+            <form method="post" action="{{ url_for('change_role', id=u._id) }}">
+              {% set r = (u.role if 'role' in u else u.get('role')) or u.get('role') %}
+              <div class="input-group">
+                <select class="form-select" name="role" required>
+                  <option value="admin"   {{ 'selected' if r=='admin' else '' }}>admin</option>
+                  <option value="manager" {{ 'selected' if r=='manager' else '' }}>manager</option>
+                  <option value="user"    {{ 'selected' if r in [None,'user'] else '' }}>user</option>
+                </select>
+                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-check2"></i></button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-secondary py-4">No data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

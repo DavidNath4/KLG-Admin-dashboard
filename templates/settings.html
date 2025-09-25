@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-3">Database Settings</h3>
+<p class="text-secondary">Uji & terapkan koneksi MongoDB dari antarmuka.</p>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post" class="row gy-3">
+      <div class="col-12">
+        <label class="form-label">MONGO_URI</label>
+        <input class="form-control" type="text" name="MONGO_URI"
+               value="{{ MONGO_URI }}" placeholder="mongodb://localhost:27017/" required>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">MONGO_DB</label>
+        <input class="form-control" type="text" name="MONGO_DB"
+               value="{{ MONGO_DB }}" placeholder="LibreChat" required>
+      </div>
+
+      {% if test_result is not None %}
+      <div class="col-12">
+        <div class="alert {{ 'alert-success' if test_result.ok else 'alert-danger' }} mb-0">
+          {{ test_result.message }}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-outline-info" name="action" value="test" type="submit">
+          <i class="bi bi-plug"></i> Test Connection
+        </button>
+        <button class="btn btn-outline-secondary" name="action" value="save" type="submit" title="Simpan ke .env">
+          <i class="bi bi-save"></i> Save to .env
+        </button>
+        <button class="btn btn-primary" name="action" value="apply" type="submit" title="Apply ke runtime">
+          <i class="bi bi-check2-circle"></i> Apply
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="small text-secondary">
+  Catatan: <code>Test</code> memeriksa ping & list collections. <code>Save</code> menulis MONGO_URI/MONGO_DB ke <code>.env</code>. 
+  <code>Apply</code> me-reload koneksi di proses Flask saat ini.
+</div>
+{% endblock %}
