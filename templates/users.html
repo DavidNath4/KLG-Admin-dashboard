@@ -44,9 +44,9 @@
               {% set r = (u.role if 'role' in u else u.get('role')) or u.get('role') %}
               <div class="input-group">
                 <select class="form-select" name="role" required>
-                  <option value="admin"   {{ 'selected' if r=='admin' else '' }}>admin</option>
-                  <option value="manager" {{ 'selected' if r=='manager' else '' }}>manager</option>
-                  <option value="user"    {{ 'selected' if r in [None,'user'] else '' }}>user</option>
+                  <option value="ADMIN"   {{ 'selected' if r=='admin' else '' }}>ADMIN</option>
+                  <!-- <option value="manager" {{ 'selected' if r=='manager' else '' }}>manager</option> -->
+                  <option value="USER"    {{ 'selected' if r in [None,'user'] else '' }}>USER</option>
                 </select>
                 <button class="btn btn-outline-primary" type="submit"><i class="bi bi-check2"></i></button>
               </div>
