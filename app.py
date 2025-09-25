@@ -6,6 +6,7 @@ from bson import ObjectId
 from dotenv import load_dotenv
 from time import perf_counter
 import os, uuid, re
+import pandas as pd
 
 # --- Load ENV ---
 load_dotenv()
@@ -246,6 +247,75 @@ def db_settings():
         MONGO_DB=dbname,
         test_result=test_result,
     )
+
+@app.route("/admin/tokens")
+def admin_tokens():
+    rows = []
+    if client is not None:
+        db = client[MONGO_DB]
+        users_col = db[USERS_COL]
+        messages_col = db["messages"]
+        convos_col = db["conversations"]
+        agents_col = db["agents"]
+
+        # === Ambil data raw ===
+        users = {str(u["_id"]): u for u in users_col.find({})}
+        convos = {str(c["_id"]): c for c in convos_col.find({})}
+        messages = list(messages_col.find({}))
+        agents = list(agents_col.find({}))
+
+        # === Normalisasi messages ===
+        data = []
+        for msg in messages:
+            user_id = str(msg.get("user"))
+            user = users.get(user_id, {})
+
+            # ganti model ID → agent name
+            for agent in agents:
+                if agent["id"] == msg.get("model"):
+                    msg["model"] = agent["model"]
+
+            # ambil tanggal
+            created_at = msg.get("createdAt")
+            if created_at:
+                date_str = created_at.date()
+            else:
+                convo = convos.get(str(msg.get("conversationId")), {})
+                created_at = convo.get("createdAt")
+                date_str = created_at.date() if created_at else None
+
+            if date_str is None:
+                continue
+            
+            data.append({
+                "date": date_str,
+                "user_id": user_id,
+                "name": user.get("name", "Unknown"),
+                "email": user.get("email"),
+                "tokens": msg.get("tokenCount", 0),
+                "messageId": str(msg.get("_id")),
+                "model": msg.get("model", "None")
+            })
+
+        # === Pakai pandas untuk olah "Daily User Usage" ===
+        df = pd.DataFrame(data)
+
+        if not df.empty:
+            daily_usage = (
+                df.groupby(["date", "email", "model"])
+                .agg(
+                    name=("name", "first"),
+                    total_tokens=("tokens", "sum"),
+                    total_messages=("messageId", "count"),
+                )
+                .reset_index()
+            )
+
+            # ubah ke dict list → render ke HTML
+            rows = daily_usage.to_dict(orient="records")
+
+    return render_template("tokens.html", title="Token Usage", active="tokens", rows=rows)
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=3000)

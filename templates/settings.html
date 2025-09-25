@@ -17,7 +17,7 @@
                value="{{ MONGO_DB }}" placeholder="LibreChat" required>
       </div>
 
-      {% if test_result is not None %}
+      {% if test_result is not none %}
       <div class="col-12">
         <div class="alert {{ 'alert-success' if test_result.ok else 'alert-danger' }} mb-0">
           {{ test_result.message }}
