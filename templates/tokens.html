@@ -33,10 +33,10 @@
       <button class="btn btn-primary btn-sm flex-fill" type="submit">
         <i class="bi bi-check2 me-1"></i>Apply
       </button>
-      <a class="btn btn-outline-secondary btn-sm flex-fill" href="{{ url_for('admin_tokens') }}">
+      <a class="btn btn-outline-secondary btn-sm flex-fill" href="{{ url_for('tokens.admin_tokens') }}">
         Clear
       </a>
-      <a class="btn btn-success btn-sm flex-fill" href="{{ url_for('admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, export='xlsx') }}">
+      <a class="btn btn-success btn-sm flex-fill" href="{{ url_for('tokens.admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, export='xlsx') }}">
         Export
       </a>
     </div>

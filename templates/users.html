@@ -27,7 +27,7 @@
         <tr>
           <th>#</th>
           <th>
-            <a href="{{ url_for('admin_users', q=q, sort='email', dir='asc' if sort!='email' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
+            <a href="{{ url_for('users.admin_users', q=q, sort='email', dir='asc' if sort!='email' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
               Email
               {% if sort=='email' %}
                 {% if dir=='asc' %}▲{% else %}▼{% endif %}
@@ -35,7 +35,7 @@
             </a>
           </th>
           <th>
-            <a href="{{ url_for('admin_users', q=q, sort='name', dir='asc' if sort!='name' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
+            <a href="{{ url_for('users.admin_users', q=q, sort='name', dir='asc' if sort!='name' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
               Name
               {% if sort=='name' %}
                 {% if dir=='asc' %}▲{% else %}▼{% endif %}
@@ -43,7 +43,7 @@
             </a>
           </th>
           <th>
-            <a href="{{ url_for('admin_users', q=q, sort='role', dir='asc' if sort!='role' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
+            <a href="{{ url_for('users.admin_users', q=q, sort='role', dir='asc' if sort!='role' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
               Role
               {% if sort=='role' %}
                 {% if dir=='asc' %}▲{% else %}▼{% endif %}
@@ -62,7 +62,7 @@
           <td>{{ u.name or u['name'] or '-' }}</td>
           <td><span class="badge text-bg-secondary">{{ u.role or u['role'] or 'user' }}</span></td>
           <td>
-            <form method="post" action="{{ url_for('change_role', id=u._id) }}">
+            <form method="post" action="{{ url_for('users.change_role', id=u._id) }}">
               {% set r = ((u.role if 'role' in u else u.get('role')) or u.get('role') or '').upper() %}
               <div class="input-group">
                 <select class="form-select" name="role" required>    

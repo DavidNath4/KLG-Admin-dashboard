@@ -14,24 +14,24 @@
       <div class="bg-black p-3 vh-100" style="width: 240px;">
         <h2 class="fs-5 text-info mb-4">KLG Dashboard</h2>
         <div class="list-group list-group-flush">
-          <a href="{{ url_for('admin_users') }}" 
+          <a href="{{ url_for('users.admin_users') }}" 
              class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='users' else '' }}">
             <i class="bi bi-people me-2"></i> Admin Role Management
           </a>
-          <a href="{{ url_for('categories') }}" 
+          <a href="{{ url_for('categories.categories') }}" 
              class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='categories' else '' }}">
             <i class="bi bi-list-check me-2"></i> Category Configuration
           </a>
-          <a href="{{ url_for('admin_tokens') }}" 
+          <a href="{{ url_for('tokens.admin_tokens') }}" 
             class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='tokens' else '' }}">
             <i class="bi bi-bar-chart-line me-2"></i> Token Usage
           </a>
-          <a href="{{ url_for('file_monitoring') }}" 
+          <a href="{{ url_for('files.file_monitoring') }}" 
             class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='files' else '' }}">
             <i class="bi bi-folder2-open me-2"></i> File Monitoring
           </a>
 
-          <a href="{{ url_for('db_settings') }}" 
+          <a href="{{ url_for('settings.db_settings') }}" 
              class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='settings' else '' }}">
             <i class="bi bi-gear me-2"></i> Settings
           </a>
