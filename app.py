@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # app.py — Flask Admin (Simple Dark, Mongo) + Settings (Test/Apply)
-from flask import Flask, render_template, request, redirect, url_for, flash
-from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from datetime import datetime, timedelta, date
 from bson import ObjectId
 from dotenv import load_dotenv
 from time import perf_counter
@@ -98,15 +98,35 @@ def home():
 @app.route("/admin/users", methods=["GET", "POST"])
 def admin_users():
     q = request.args.get("q", "").strip()
+    sort_field = request.args.get("sort", "email")  # default sort email
+    sort_dir   = request.args.get("dir", "asc")
+
+    # validasi field agar aman
+    allowed_fields = {"email", "name", "role"}
+    if sort_field not in allowed_fields:
+        sort_field = "email"
+
+    direction = 1 if sort_dir == "asc" else -1
+
     data = []
     if users is not None:
-        if q:
-            # hasil pencarian
-            data = list(users.find({"email": {"$regex": q, "$options": "i"}}).limit(50))
-        else:
-            # default: 10 user random
-            data = list(users.aggregate([{"$sample": {"size": 10}}]))
-    return render_template("users.html", title="Set Up Admin", active="users", users=data, q=q, users_col=USERS_COL)
+        query = {"email": {"$regex": q, "$options": "i"}} if q else {}
+        data = list(
+            users.find(query)
+                 .sort(sort_field, direction)
+                 .limit(50 if q else 10)
+        )
+
+    return render_template(
+        "users.html",
+        title="Set Up Admin",
+        active="users",
+        users=data,
+        q=q,
+        users_col=USERS_COL,
+        sort=sort_field,
+        dir=sort_dir,
+    )
 
 @app.post("/admin/users/<id>/role")
 def change_role(id):
@@ -250,71 +270,222 @@ def db_settings():
 
 @app.route("/admin/tokens")
 def admin_tokens():
+    
     rows = []
-    if client is not None:
-        db = client[MONGO_DB]
-        users_col = db[USERS_COL]
-        messages_col = db["messages"]
-        convos_col = db["conversations"]
-        agents_col = db["agents"]
+    selected_agent = request.args.get("agent", "general")  # default: all
+    date_from = request.args.get("date_from", "")          # 'YYYY-MM-DD' atau ''
+    date_to   = request.args.get("date_to", "")            # 'YYYY-MM-DD' atau ''
+    agents_list = []
+    print(selected_agent, date_from, date_to)
 
-        # === Ambil data raw ===
-        users = {str(u["_id"]): u for u in users_col.find({})}
-        convos = {str(c["_id"]): c for c in convos_col.find({})}
-        messages = list(messages_col.find({}))
-        agents = list(agents_col.find({}))
+    if client is None:
+        return render_template(
+            "tokens.html",
+            title="Token Usage",
+            active="tokens",
+            rows=rows,
+            agents_list=agents_list,
+            selected_agent=selected_agent,
+            date_from=date_from,
+            date_to=date_to,
+        )
 
-        # === Normalisasi messages ===
-        data = []
-        for msg in messages:
-            user_id = str(msg.get("user"))
-            user = users.get(user_id, {})
+    # Ambil handle collection dari koneksi yang sama (bukan koneksi baru)
+    db = client[MONGO_DB]
+    users_col = db[USERS_COL]
+    messages_col = db["messages"]
+    convos_col = db["conversations"]
+    agents_col = db["agents"]
 
-            # ganti model ID → agent name
-            for agent in agents:
-                if agent["id"] == msg.get("model"):
-                    msg["model"] = agent["model"]
+    
+    # ---- 1) Prefetch referensi yang dibutuhkan ----
+    agents_list = list(agents_col.find({}, {"id": 1, "name": 1}).sort("name", 1))
 
-            # ambil tanggal
-            created_at = msg.get("createdAt")
-            if created_at:
-                date_str = created_at.date()
+    agents_map = {
+        a["id"]: a.get("model")
+        for a in agents_col.find({}, {"id": 1, "model": 1})
+    }
+
+    users_cache = {
+        str(u["_id"]): {"name": u.get("name", "Unknown"), "email": u.get("email")}
+        for u in users_col.find({}, {"name": 1, "email": 1})
+    }
+
+    # ---- 2) Ambil BALASAN AGENT (output) saja ----
+    assistants_query = {"isCreatedByUser": {"$in": [False, "false", "False", 0]}}
+
+    # Filter agent (jika bukan General)
+    if selected_agent != "general":
+        assistants_query["model"] = selected_agent
+
+    # Filter tanggal (berbasis createdAt balasan agent)
+    # - date_from -> createdAt >= YYYY-MM-DD 00:00:00
+    # - date_to   -> createdAt <  (YYYY-MM-DD + 1 hari) 00:00:00  (exclusive)
+    created_range = {}
+    if date_from:
+        try:
+            start_dt = datetime.strptime(date_from, "%Y-%m-%d")
+            created_range["$gte"] = start_dt
+        except ValueError as e:
+            print("[WARN] date_from invalid:", date_from, e)
+
+    if date_to:
+        try:
+            end_dt_exclusive = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+            created_range["$lt"] = end_dt_exclusive
+        except ValueError as e:
+            print("[WARN] date_to invalid:", date_to, e)
+
+    if created_range:
+        assistants_query["createdAt"] = created_range
+
+
+    assistants = list(
+        messages_col.find(
+            assistants_query,
+            {
+                "user": 1,
+                "model": 1,
+                "createdAt": 1,
+                "conversationId": 1,
+                "tokenCount": 1,
+                "parentMessageId": 1,
+            },
+        )
+    )
+
+    # Kumpulkan conversationId & parentMessageId untuk prefetch
+    conv_ids = {str(m.get("conversationId")) for m in assistants if m.get("conversationId")}
+    parent_ids = [m.get("parentMessageId") for m in assistants if m.get("parentMessageId")]
+
+    # Prefetch conversations.createdAt (fallback saja)
+    convos_map = {}
+    if conv_ids:
+        for c in convos_col.find({"_id": {"$in": list(conv_ids)}}, {"createdAt": 1}):
+            convos_map[str(c["_id"])] = c.get("createdAt")
+
+    # Prefetch parent messages
+    parents_map = {}
+    if parent_ids:
+        for p in messages_col.find(
+            {"messageId": {"$in": parent_ids}},
+            {"messageId": 1, "isCreatedByUser": 1, "tokenCount": 1},
+        ):
+            parents_map[p.get("messageId")] = p
+
+    # ---- 3) Build data per turn (input dari parent + output dari agent reply) ----
+    data = []
+    for m in assistants:
+        user_id = str(m.get("user"))
+        user_info = users_cache.get(user_id, {"name": "Unknown", "email": None})
+
+        model_id_or_name = m.get("model")
+        model_name = agents_map.get(model_id_or_name, model_id_or_name or "Unknown Model")
+
+        created_at = m.get("createdAt") or convos_map.get(str(m.get("conversationId")))
+        if not created_at:
+            continue
+        date_str = created_at.date()
+
+        out_tokens = int(m.get("tokenCount", 0) or 0)
+
+        in_tokens = 0
+        parent = parents_map.get(m.get("parentMessageId"))
+        if parent:
+            raw_flag = parent.get("isCreatedByUser", False)
+            if isinstance(raw_flag, bool):
+                is_user_parent = raw_flag
             else:
-                convo = convos.get(str(msg.get("conversationId")), {})
-                created_at = convo.get("createdAt")
-                date_str = created_at.date() if created_at else None
+                is_user_parent = (str(raw_flag).lower() == "true") or (raw_flag == 1)
+            if is_user_parent:
+                in_tokens = int(parent.get("tokenCount", 0) or 0)
 
-            if date_str is None:
-                continue
-            
-            data.append({
-                "date": date_str,
-                "user_id": user_id,
-                "name": user.get("name", "Unknown"),
-                "email": user.get("email"),
-                "tokens": msg.get("tokenCount", 0),
-                "messageId": str(msg.get("_id")),
-                "model": msg.get("model", "None")
-            })
+        data.append({
+            "date": str(date_str),
+            "name": user_info.get("name", "Unknown"),
+            "email": user_info.get("email"),
+            "model": model_name,
+            "tokens": in_tokens + out_tokens,
+            "input_tokens": in_tokens,
+            "output_tokens": out_tokens,
+            "messages_in_turn": 1 + (1 if parent else 0),
+        })
 
-        # === Pakai pandas untuk olah "Daily User Usage" ===
-        df = pd.DataFrame(data)
+    # ---- 4) Agregasi per (date, email, model) ----
+    df = pd.DataFrame(data)
+    if not df.empty:
+        daily_usage = (
+            df.groupby(["date", "email", "model"])
+              .agg(
+                  name=("name", "first"),
+                  total_tokens=("tokens", "sum"),
+                  input_tokens=("input_tokens", "sum"),
+                  output_tokens=("output_tokens", "sum"),
+                  total_messages=("messages_in_turn", "sum"),
+              )
+              .reset_index()
+        )
+        rows = daily_usage.to_dict(orient="records")
+        rows.sort(key=lambda r: (r["date"], r["email"] or "", r["model"] or ""))
+    
+    now_date = date.today().isoformat()
 
-        if not df.empty:
-            daily_usage = (
-                df.groupby(["date", "email", "model"])
-                .agg(
-                    name=("name", "first"),
-                    total_tokens=("tokens", "sum"),
-                    total_messages=("messageId", "count"),
-                )
-                .reset_index()
+    # === Export ke Excel (.xlsx) via pandas + openpyxl
+    if request.args.get("export") == "xlsx":
+        # Pastikan openpyxl ada
+        try:
+            import openpyxl  # noqa: F401
+        except Exception:
+            # Bisa juga pakai flash+redirect jika mau, tapi paling simpel: error jelas
+            return "openpyxl belum terpasang. Jalankan: pip install openpyxl", 500
+
+        from io import BytesIO
+        from flask import send_file
+
+        # Siapkan DataFrame dari rows; meski kosong kita tetap kasih header yang rapi
+        df_x = pd.DataFrame(rows)
+        if df_x.empty:
+            df_x = pd.DataFrame(
+                columns=[
+                    "date", "name", "email", "model",
+                    "total_tokens", "input_tokens", "output_tokens", "total_messages"
+                ]
             )
 
-            # ubah ke dict list → render ke HTML
-            rows = daily_usage.to_dict(orient="records")
+        # Urutkan kolom biar konsisten
+        wanted = [
+            "date", "name", "email", "model",
+            "total_tokens", "input_tokens", "output_tokens", "total_messages"
+        ]
+        cols = [c for c in wanted if c in df_x.columns]
+        df_x = df_x[cols] if cols else df_x
 
-    return render_template("tokens.html", title="Token Usage", active="tokens", rows=rows)
+        # Tulis ke buffer Excel
+        output = BytesIO()
+        filename = f"token-usage_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df_x.to_excel(writer, index=False, sheet_name="Token Usage")
+        output.seek(0)
+
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    return render_template(
+        "tokens.html",
+        title="Token Usage",
+        active="tokens",
+        rows=rows,
+        agents_list=agents_list,
+        selected_agent=selected_agent,
+        date_from=date_from,
+        date_to=date_to,
+        now_date=now_date
+    )
 
 
 if __name__ == "__main__":
