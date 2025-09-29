@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # app.py — Flask Admin (Simple Dark, Mongo) + Settings (Test/Apply)
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, send_file,request, redirect, url_for, flash, send_file
 from datetime import datetime, timedelta, date
 from bson import ObjectId
 from dotenv import load_dotenv
 from time import perf_counter
 import os, uuid, re
 import pandas as pd
+from io import BytesIO
+from openpyxl import Workbook
 
 # --- Load ENV ---
 load_dotenv()
@@ -88,6 +90,103 @@ def upsert_env(path: str, key: str, value: str):
         lines.append(f"{key}={value}")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+
+def _files_col():
+    return client[MONGO_DB]['files'] if client else None
+
+def _human_bytes(n):
+    if n is None: return "-"
+    for unit in ['B','KB','MB','GB','TB']:
+        if n < 1024.0:
+            return f"{n:.0f} {unit}" if unit=='B' else f"{n:.2f} {unit}"
+        n /= 1024.0
+    return f"{n:.2f} PB"
+
+def _parse_date(dstr):
+    if not dstr: return None
+    try:
+        return datetime.strptime(dstr, "%Y-%m-%d")
+    except Exception:
+        return None
+
+@app.get("/admin/files")
+def file_monitoring():
+    files_col = _files_col()
+    users_col = users  # handle collection users dari koneksi global
+
+    start_str = request.args.get("start", "").strip()
+    end_str   = request.args.get("end", "").strip()
+    export    = request.args.get("export")
+
+    # Filter by createdAt range
+    query = {}
+    start_dt = _parse_date(start_str)
+    end_dt = _parse_date(end_str)
+    if start_dt or end_dt:
+        query["createdAt"] = {}
+        if start_dt:
+            query["createdAt"]["$gte"] = datetime.combine(start_dt, time.min)
+        if end_dt:
+            query["createdAt"]["$lte"] = datetime.combine(end_dt, time.max)
+
+    rows = []
+    if files_col is not None:
+        cursor = files_col.find(query).sort("createdAt", -1).limit(1000)
+        for doc in cursor:
+            # resolve nama user dari users._id
+            user_name = None
+            if users_col is not None and doc.get("user"):
+                u = users_col.find_one({"_id": doc["user"]}, {"name": 1})
+                if u:
+                    user_name = u.get("name")
+
+            rows.append({
+                "createdAt": doc.get("createdAt"),
+                "filename":  doc.get("filename"),
+                "type":      doc.get("type"),
+                "size_h":    _human_bytes(doc.get("bytes")),
+                "size":      doc.get("bytes"),
+                "user":      user_name or (str(doc.get("user")) if doc.get("user") else None),
+                "_id":       str(doc.get("_id")),
+                "file_id":   doc.get("file_id"),
+            })
+
+    # Export Excel jika diminta
+    if export == "1":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "files"
+        headers = ["createdAt","filename","type","size(bytes)","user","_id","file_id"]
+        ws.append(headers)
+        for r in rows:
+            ws.append([
+                r["createdAt"].isoformat() if r["createdAt"] else "",
+                r["filename"] or "",
+                r["type"] or "",
+                r["size"] or 0,
+                r["user"] or "",
+                r["_id"] or "",
+                r["file_id"] or "",
+            ])
+        stream = BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        fname = f"files_{start_str or 'all'}_{end_str or 'all'}.xlsx"
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=fname,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    return render_template(
+        "files.html",
+        title="File Monitoring",
+        active="files",
+        rows=rows,
+        start=start_str,
+        end=end_str
+    )
 
 # --- Routes ---
 @app.get("/")
