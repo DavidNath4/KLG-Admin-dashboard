@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, current_app
+from flask import Blueprint, render_template, request, flash, current_app, redirect, url_for
 from time import perf_counter
 from config.mongo import init_mongo, reload_mongo
 from pymongo import MongoClient
@@ -37,46 +37,39 @@ def db_settings():
     action = request.form.get("action")
     test_result = None
 
-    if action == "test":
-        try:
-            t0 = perf_counter()
-            _client = MongoClient(uri, serverSelectionTimeoutMS=3000)
-            _client.admin.command("ping")
-
-            if not db_exists(uri, dbname):
-                test_result = {"ok": False, "message": f"⚠️ DB '{dbname}' belum ada di server"}
-            else:
-                _ = list(_client[dbname].list_collections())
-                dt = (perf_counter() - t0) * 1000
-                test_result = {"ok": True, "message": f"✅ Koneksi OK ke {dbname} ({dt:.0f} ms)"}
-        except Exception as e:
-            test_result = {"ok": False, "message": f"❌ Gagal konek: {e}"}
-        
-
     if request.method == "POST":
         if action == "test":
             try:
                 t0 = perf_counter()
                 _client = MongoClient(uri, serverSelectionTimeoutMS=3000)
                 _client.admin.command("ping")
-                _ = list(_client[dbname].list_collections())
-                dt = (perf_counter() - t0) * 1000
-                test_result = {"ok": True, "message": f"✅ Koneksi OK ({dt:.0f} ms)"}
+
+                if not db_exists(uri, dbname):
+                    test_result = {"ok": False, "message": f"⚠️ DB '{dbname}' belum ada di server"}
+                else:
+                    _ = list(_client[dbname].list_collections())
+                    dt = (perf_counter() - t0) * 1000
+                    test_result = {"ok": True, "message": f"✅ Koneksi OK ke {dbname} ({dt:.0f} ms)"}
             except Exception as e:
                 test_result = {"ok": False, "message": f"❌ Gagal konek: {e}"}
+
         elif action == "save":
             try:
                 save_db_config(uri, dbname)
                 flash("Konfigurasi disimpan ke db_config.json")
             except Exception as e:
                 flash(f"Gagal menyimpan konfigurasi: {e}")
+            return redirect(url_for("settings.db_settings"))
+
         elif action == "apply":
             try:
                 reload_mongo(current_app, uri, dbname)
                 flash("Koneksi Mongo berhasil di-apply.")
             except Exception as e:
                 flash(f"Gagal apply koneksi: {e}")
+            return redirect(url_for("settings.db_settings"))
 
+    
     return render_template(
         "settings.html",
         title="DB Settings",

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3 class="mb-3">Balance Management</h3>
+<p class="text-secondary mb-3">Daftar user dan konfigurasi token balance di LibreChat.</p>
+<div class="card">
+  <div class="card-header">User Balance Table</div>
+  <div class="table-responsive">
+    <table class="table table-dark table-striped align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Token Credits</th>
+          <th>Auto Refill</th>
+          <th>Refill Amount</th>
+          <th>Refill Value</th>
+          <th>Refill Unit</th>
+          <th>Last Refill</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr data-id="{{ r.id }}" class="row-balance">
+            <td>{{ loop.index }}</td>
+            <td>{{ r.email }}</td>
+            <td>{{ r.name }}</td>
+            <td>
+              <span class="view-mode">{{ "{:.2f}".format(r.tokenCredits) }}</span>
+              <input type="text"
+                     name="tokenCredits"
+                     class="form-control form-control-sm edit-mode"
+                     style="display:none; max-width:110px;"
+                     value="{{ "{:.2f}".format(r.tokenCredits) }}"
+                     form="form-{{ r.id }}">
+            </td>
+            <td>
+              <span class="view-mode">
+                {% if r.autoRefillEnabled %}
+                  <span class="badge text-bg-success">ON</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">OFF</span>
+                {% endif %}
+              </span>
+              <select name="autoRefillEnabled"
+                      class="form-select form-select-sm edit-mode"
+                      style="display:none; max-width:80px;"
+                      form="form-{{ r.id }}">
+                <option value="on"  {% if r.autoRefillEnabled %}selected{% endif %}>ON</option>
+                <option value="off" {% if not r.autoRefillEnabled %}selected{% endif %}>OFF</option>
+              </select>
+            </td>
+            
+            <td>
+              <span class="view-mode">{{ r.refillAmount }}</span>
+              <input type="number" step="1" name="refillAmount"
+                     class="form-control form-control-sm edit-mode"
+                     style="display:none; max-width:90px;"
+                     value="{{ r.refillAmount }}"
+                     form="form-{{ r.id }}">
+            </td>
+
+            <td>
+              <span class="view-mode">{{ r.refillIntervalValue }}</span>
+              <input type="number" step="1" name="refillIntervalValue"
+                    class="form-control form-control-sm edit-mode"
+                    style="display:none; max-width:70px;"
+                    value="{{ r.refillIntervalValue }}"
+                    form="form-{{ r.id }}">
+            </td>
+
+            <td>
+              <span class="view-mode">{{ r.refillIntervalUnit }}</span>
+              <select name="refillIntervalUnit"
+                      class="form-select form-select-sm edit-mode"
+                      style="display:none; max-width:80px;"
+                      form="form-{{ r.id }}">
+                {% for unit in refill_units %}
+                  <option value="{{ unit }}" {% if r.refillIntervalUnit == unit %}selected{% endif %}>{{ unit }}</option>
+                {% endfor %}
+              </select>
+            </td>
+
+            <td>{{ r.lastRefill }}</td>
+
+            <td>
+              <div class="d-flex gap-2 align-items-center">
+                <button type="button"
+                        class="btn btn-sm btn-warning btn-edit view-mode px-3"
+                        onclick="editRow(this)">Edit</button>
+
+                <form id="form-{{ r.id }}"
+                      method="post"
+                      action="{{ url_for('balances.edit_balance', balance_id=r.id) }}"
+                      class="edit-mode mb-0"
+                      style="display:none;">
+                  <button type="submit" class="btn btn-success btn-sm px-3 me-1">Apply</button>
+                  <button type="button" class="btn btn-secondary btn-sm px-3" onclick="cancelEdit(this)">Cancel</button>
+                </form>
+              </div>
+            </td>
+
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="10" class="text-center text-secondary py-4">No data found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+        
+    </table>
+  </div>
+</div>
+
+<script>
+  // Hanya aktifkan mode edit untuk row yang ditekan
+  function editRow(btn) {
+    // Reset semua row ke view mode
+    document.querySelectorAll(".row-balance").forEach(function(tr){
+      tr.querySelectorAll(".edit-mode").forEach(e=>e.style.display="none");
+      tr.querySelectorAll(".view-mode").forEach(e=>e.style.display="");
+    });
+    // Aktifkan edit mode di row ini saja
+    const tr = btn.closest("tr");
+    tr.querySelectorAll(".view-mode").forEach(e=>e.style.display="none");
+    tr.querySelectorAll(".edit-mode").forEach(e=>e.style.display="");
+    // Disable/enable field refill jika OFF
+    const autoRefill = tr.querySelector("select[name=autoRefillEnabled]");
+    if (autoRefill && autoRefill.value === "off") {
+      ["refillAmount","refillIntervalValue","refillIntervalUnit"].forEach(name=>{
+        const f = tr.querySelector(`[name=${name}]`);
+        if(f) { f.disabled = true; f.style.backgroundColor = "#444"; }
+      });
+    }
+  }
+  function cancelEdit(btn) {
+    const tr = btn.closest("tr");
+    tr.querySelectorAll(".edit-mode").forEach(e=>e.style.display="none");
+    tr.querySelectorAll(".view-mode").forEach(e=>e.style.display="");
+  }
+  document.addEventListener("input", function(e){
+    if (e.target.name == "autoRefillEnabled") {
+      const tr = e.target.closest("tr");
+      const isOn = e.target.value === "on";
+      ["refillAmount","refillIntervalValue","refillIntervalUnit"].forEach(name=>{
+        const f = tr.querySelector(`[name=${name}]`);
+        if(f) { f.disabled = !isOn; f.style.backgroundColor = isOn ? "" : "#444"; }
+      });
+    }
+  });
+</script>
+  
+{% endblock %}

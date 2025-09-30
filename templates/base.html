@@ -30,6 +30,11 @@
             class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='files' else '' }}">
             <i class="bi bi-folder2-open me-2"></i> File Monitoring
           </a>
+          <a href="{{ url_for('balances.balance_list') }}" 
+            class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='balances' else '' }}">
+            <i class="bi bi-cash-stack me-2"></i> Balance Management
+          </a>
+
 
           <a href="{{ url_for('settings.db_settings') }}" 
              class="list-group-item list-group-item-action bg-transparent text-light {{ 'active-link' if active=='settings' else '' }}">
