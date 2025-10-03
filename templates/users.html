@@ -20,14 +20,14 @@
 {% endif %}
 
 <div class="card">
-  <div class="card-header">Results</div>
+  <div class="card-header">Results ({{ total }} users)</div>
   <div class="table-responsive">
     <table class="table table-dark table-striped align-middle mb-0">
       <thead>
         <tr>
           <th>#</th>
           <th>
-            <a href="{{ url_for('users.admin_users', q=q, sort='email', dir='asc' if sort!='email' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
+            <a href="{{ url_for('users.admin_users', q=q, sort='email', dir='asc' if sort!='email' or dir=='desc' else 'desc', page=1, per_page=per_page) }}" class="text-light text-decoration-none">
               Email
               {% if sort=='email' %}
                 {% if dir=='asc' %}▲{% else %}▼{% endif %}
@@ -35,7 +35,7 @@
             </a>
           </th>
           <th>
-            <a href="{{ url_for('users.admin_users', q=q, sort='name', dir='asc' if sort!='name' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
+            <a href="{{ url_for('users.admin_users', q=q, sort='name', dir='asc' if sort!='name' or dir=='desc' else 'desc', page=1, per_page=per_page) }}" class="text-light text-decoration-none">
               Name
               {% if sort=='name' %}
                 {% if dir=='asc' %}▲{% else %}▼{% endif %}
@@ -43,7 +43,7 @@
             </a>
           </th>
           <th>
-            <a href="{{ url_for('users.admin_users', q=q, sort='role', dir='asc' if sort!='role' or dir=='desc' else 'desc') }}" class="text-light text-decoration-none">
+            <a href="{{ url_for('users.admin_users', q=q, sort='role', dir='asc' if sort!='role' or dir=='desc' else 'desc', page=1, per_page=per_page) }}" class="text-light text-decoration-none">
               Role
               {% if sort=='role' %}
                 {% if dir=='asc' %}▲{% else %}▼{% endif %}
@@ -57,7 +57,7 @@
       <tbody>
         {% for u in users %}
         <tr>
-          <td>{{ loop.index }}</td>
+          <td>{{ (page -1) * per_page + loop.index }}</td>
           <td>{{ u.email or u['email'] or '-' }}</td>
           <td>{{ u.name or u['name'] or '-' }}</td>
           <td><span class="badge text-bg-secondary">{{ u.role or u['role'] or 'user' }}</span></td>
@@ -80,5 +80,38 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Pagination footer -->
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <div>
+      <form method="get" class="d-inline">
+        <input type="hidden" name="q" value="{{ q }}">
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="dir" value="{{ dir }}">
+        <label class="me-2 text-secondary">Per page</label>
+        <select name="per_page" class="form-select d-inline w-auto" onchange="this.form.submit()">
+          {% for n in [5,10,20,50,100] %}
+            <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+          <a class="page-link"
+             href="{{ url_for('users.admin_users', q=q, sort=sort, dir=dir, page=page-1, per_page=per_page) }}">« Prev</a>
+        </li>
+        <li class="page-item disabled">
+          <span class="page-link">{{ page }}/{{ total_pages }}</span>
+        </li>
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+          <a class="page-link"
+             href="{{ url_for('users.admin_users', q=q, sort=sort, dir=dir, page=page+1, per_page=per_page) }}">Next »</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
 </div>
+
 {% endblock %}
