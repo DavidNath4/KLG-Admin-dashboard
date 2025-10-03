@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h3 class="mb-3">File Monitoring</h3>
-<p class="text-secondary">Filter rentang <code>createdAt</code>, lihat ringkas file, dan ekspor ke Excel.</p>
+<p class="text-secondary">Filter per tanggal & user, sort via klik header, dan ekspor ke Excel.</p>
 
 <form class="row g-2 align-items-end mb-3" method="get">
   <div class="col-12 col-md-3">
@@ -12,38 +12,82 @@
     <label class="form-label">End date</label>
     <input type="date" class="form-control" name="end" value="{{ end }}">
   </div>
+  <div class="col-12 col-md-3">
+    <label class="form-label">User</label>
+    <select name="user" class="form-select">
+      <option value="">— All users —</option>
+      {% for u in user_options %}
+        <option value="{{ u._id }}" {{ 'selected' if user == u._id else '' }}>
+          {{ u.name }} ({{ u._id[:6] }}…)
+        </option>
+      {% endfor %}
+    </select>
+  </div>
   <div class="col-12 col-md-3 d-grid">
     <button class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
   </div>
-  <div class="col-12 col-md-3 d-grid">
-    <a class="btn btn-outline-success"
-       href="{{ url_for('files.file_monitoring', start=start, end=end, export=1) }}">
-      <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
-    </a>
-  </div>
 </form>
+
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-outline-success"
+     href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s=s, o=o, export=1) }}">
+    <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+  </a>
+</div>
 
 <div class="card">
   <div class="card-header d-flex justify-content-between">
     <span>Files</span>
-    <span class="badge text-bg-secondary">{{ rows|length if rows else 0 }} items</span>
+    <span class="badge text-bg-secondary">{{ total }} total • page {{ page }}/{{ total_pages }}</span>
   </div>
+
   <div class="table-responsive">
     <table class="table table-dark table-striped align-middle mb-0 small">
       <thead>
         <tr>
           <th>#</th>
-          <th>Created At</th>
-          <th>Filename</th>
-          <th>Type</th>
-          <th>Size</th>
-          <th>User</th>
+          {% set new_o = 'asc' if o == 'desc' else 'desc' %}
+          <th>
+            <a class="link-light text-decoration-none"
+               href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='createdAt', o=new_o, page=1, per_page=per_page) }}">
+              Created At
+              {% if s == 'createdAt' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="link-light text-decoration-none"
+               href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='filename', o=new_o, page=1, per_page=per_page) }}">
+              Filename
+              {% if s == 'filename' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="link-light text-decoration-none"
+               href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='type', o=new_o, page=1, per_page=per_page) }}">
+              Type
+              {% if s == 'type' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="link-light text-decoration-none"
+               href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='bytes', o=new_o, page=1, per_page=per_page) }}">
+              Size
+              {% if s == 'bytes' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+            </a>
+          </th>
+          <th>
+            <a class="link-light text-decoration-none"
+               href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='user', o=new_o, page=1, per_page=per_page) }}">
+              User
+              {% if s == 'user' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+            </a>
+          </th>
         </tr>
       </thead>
       <tbody>
         {% for r in rows %}
         <tr>
-          <td>{{ loop.index }}</td>
+          <td>{{ (page - 1) * per_page + loop.index }}</td>
           <td>{{ r.createdAt.strftime("%Y-%m-%d %H:%M") if r.createdAt else '-' }}</td>
           <td class="fw-semibold">{{ r.filename or '-' }}</td>
           <td><code>{{ r.type or '-' }}</code></td>
@@ -55,6 +99,38 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <div>
+      <form method="get" class="d-inline">
+        <input type="hidden" name="start" value="{{ start }}">
+        <input type="hidden" name="end" value="{{ end }}">
+        <input type="hidden" name="user" value="{{ user }}">
+        <input type="hidden" name="s" value="{{ s }}">
+        <input type="hidden" name="o" value="{{ o }}">
+        <label class="me-2 text-secondary">Per page</label>
+        <select name="per_page" class="form-select d-inline w-auto" onchange="this.form.submit()">
+          {% for n in [10,20,50,100,200] %}
+            <option value="{{ n }}" {{ 'selected' if per_page==n else '' }}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {{ 'disabled' if page<=1 }}">
+          <a class="page-link"
+             href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s=s, o=o, page=page-1, per_page=per_page) }}">« Prev</a>
+        </li>
+        <li class="page-item disabled"><span class="page-link">{{ page }}/{{ total_pages }}</span></li>
+        <li class="page-item {{ 'disabled' if page>=total_pages }}">
+          <a class="page-link"
+             href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s=s, o=o, page=page+1, per_page=per_page) }}">Next »</a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </div>
 {% endblock %}
