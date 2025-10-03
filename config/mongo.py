@@ -1,9 +1,8 @@
 from flask import current_app
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 import json, os
 
 CONFIG_FILE = os.path.join("config", "db_config.json")
-
 
 _client = None
 _db = None
@@ -23,12 +22,10 @@ def _load_from_json():
             return cfg.get("MONGO_URI"), cfg.get("MONGO_DB")
     return "mongodb://localhost:27017/", "LibreChat"  # fallback default
 
-
 def init_mongo(app):
     """Dipanggil sekali dari app.py untuk membuat 1 koneksi Mongo."""
     global _client, _db
 
-    # Ambil config dari Flask config atau JSON fallback
     uri = app.config.get("MONGO_URI")
     dbname = app.config.get("MONGO_DB")
 
@@ -37,33 +34,45 @@ def init_mongo(app):
         app.config["MONGO_URI"] = uri
         app.config["MONGO_DB"] = dbname
 
-    _client = MongoClient(uri, serverSelectionTimeoutMS=3000)
-    _client.admin.command("ping")
-    _db = _client[dbname]
-    app.logger.info(f"[Mongo] Connected to {uri}, db={dbname}")
-
+    try:
+        _client = MongoClient(uri, serverSelectionTimeoutMS=3000)
+        _client.admin.command("ping")
+        _db = _client[dbname]
+        app.logger.info(f"[Mongo] Connected to {uri}, db={dbname}")
+    except errors.ServerSelectionTimeoutError as e:
+        app.logger.warning(f"[Mongo] Could not connect to {uri}, db={dbname}: {e}")
+        _client, _db = None, None
 
 def get_db():
     """Ambil handle DB yang sama, tanpa buka koneksi baru."""
+    global _client, _db
     if _db is None:
-        uri, dbname = _load_from_json()
-        client = MongoClient(uri, serverSelectionTimeoutMS=3000)
-        client.admin.command("ping")
-        return client[dbname]
+        try:
+            uri, dbname = _load_from_json()
+            client = MongoClient(uri, serverSelectionTimeoutMS=3000)
+            client.admin.command("ping")
+            return client[dbname]
+        except errors.ServerSelectionTimeoutError:
+            return None
     return _db
 
-
 def get_col(name: str):
-    """Helper ambil collection."""
-    return get_db()[name]
-
+    """Helper ambil collection. Return None kalau DB tidak tersedia."""
+    db = get_db()
+    if db is None:
+        return None
+    return db[name]
 
 def reload_mongo(app, new_uri: str, new_dbname: str):
     """Dipakai di halaman Settings saat user klik 'Apply'."""
     global _client, _db
-    _client = MongoClient(new_uri, serverSelectionTimeoutMS=3000)
-    _client.admin.command("ping")
-    _db = _client[new_dbname]
-    app.config["MONGO_URI"] = new_uri
-    app.config["MONGO_DB"] = new_dbname
-    app.logger.info(f"[Mongo] Reloaded to {new_uri}, db={new_dbname}")
+    try:
+        _client = MongoClient(new_uri, serverSelectionTimeoutMS=3000)
+        _client.admin.command("ping")
+        _db = _client[new_dbname]
+        app.config["MONGO_URI"] = new_uri
+        app.config["MONGO_DB"] = new_dbname
+        app.logger.info(f"[Mongo] Reloaded to {new_uri}, db={new_dbname}")
+    except errors.ServerSelectionTimeoutError as e:
+        app.logger.warning(f"[Mongo] Reload failed for {new_uri}, db={new_dbname}: {e}")
+        _client, _db = None, None

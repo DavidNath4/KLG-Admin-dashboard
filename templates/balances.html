@@ -36,50 +36,50 @@
                      form="form-{{ r.id }}">
             </td>
             <td>
-              <span class="view-mode">
+              <span>
                 {% if r.autoRefillEnabled %}
                   <span class="badge text-bg-success">ON</span>
                 {% else %}
                   <span class="badge text-bg-secondary">OFF</span>
                 {% endif %}
               </span>
-              <select name="autoRefillEnabled"
+              <!-- <select name="autoRefillEnabled"
                       class="form-select form-select-sm edit-mode"
                       style="display:none; max-width:80px;"
                       form="form-{{ r.id }}">
                 <option value="on"  {% if r.autoRefillEnabled %}selected{% endif %}>ON</option>
                 <option value="off" {% if not r.autoRefillEnabled %}selected{% endif %}>OFF</option>
-              </select>
+              </select> -->
             </td>
             
             <td>
-              <span class="view-mode">{{ r.refillAmount }}</span>
-              <input type="number" step="1" name="refillAmount"
+              <span>{{ r.refillAmount }}</span>
+              <!-- <input type="number" step="1" name="refillAmount"
                      class="form-control form-control-sm edit-mode"
                      style="display:none; max-width:90px;"
                      value="{{ r.refillAmount }}"
-                     form="form-{{ r.id }}">
+                     form="form-{{ r.id }}"> -->
             </td>
 
             <td>
-              <span class="view-mode">{{ r.refillIntervalValue }}</span>
-              <input type="number" step="1" name="refillIntervalValue"
+              <span >{{ r.refillIntervalValue }}</span>
+              <!-- <input type="number" step="1" name="refillIntervalValue"
                     class="form-control form-control-sm edit-mode"
                     style="display:none; max-width:70px;"
                     value="{{ r.refillIntervalValue }}"
-                    form="form-{{ r.id }}">
+                    form="form-{{ r.id }}"> -->
             </td>
 
             <td>
-              <span class="view-mode">{{ r.refillIntervalUnit }}</span>
-              <select name="refillIntervalUnit"
+              <span>{{ r.refillIntervalUnit }}</span>
+              <!-- <select name="refillIntervalUnit"
                       class="form-select form-select-sm edit-mode"
                       style="display:none; max-width:80px;"
                       form="form-{{ r.id }}">
                 {% for unit in refill_units %}
                   <option value="{{ unit }}" {% if r.refillIntervalUnit == unit %}selected{% endif %}>{{ unit }}</option>
                 {% endfor %}
-              </select>
+              </select> -->
             </td>
 
             <td>{{ r.lastRefill }}</td>

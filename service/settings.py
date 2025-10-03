@@ -8,17 +8,24 @@ import os
 CONFIG_FILE = os.path.join("config", "db_config.json")
 
 def db_exists(uri, dbname):
-    client = MongoClient(uri, serverSelectionTimeoutMS=3000)
-    dblist = client.list_database_names()
-    return dbname in dblist
+    try:
+        client = MongoClient(uri, serverSelectionTimeoutMS=3000)
+        dblist = client.list_database_names()
+        return dbname in dblist
+    except Exception:
+        return False
 
 
 def load_db_config():
-    """Load konfigurasi MongoDB dari file JSON."""
+    """Load konfigurasi MongoDB dari file JSON dengan fallback default."""
     if not os.path.exists(CONFIG_FILE):
         return {"MONGO_URI": "mongodb://localhost:27017/", "MONGO_DB": "LibreChat"}
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"MONGO_URI": "mongodb://localhost:27017/", "MONGO_DB": "LibreChat"}
+
 
 def save_db_config(uri: str, dbname: str):
     """Simpan konfigurasi MongoDB ke file JSON."""
@@ -51,7 +58,7 @@ def db_settings():
                     dt = (perf_counter() - t0) * 1000
                     test_result = {"ok": True, "message": f"✅ Koneksi OK ke {dbname} ({dt:.0f} ms)"}
             except Exception as e:
-                test_result = {"ok": False, "message": f"❌ Gagal konek: {e}"}
+                test_result = {"ok": False, "message": f"❌ Failled to connect: {e}"}
 
         elif action == "save":
             try:

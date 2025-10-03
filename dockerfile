@@ -15,5 +15,5 @@ COPY . .
 # Expose port (Flask default 3000)
 EXPOSE 3000
 
-# app:app -> file app.py, object Flask bernama app
-CMD ["gunicorn", "--bind", "0.0.0.0:3000", "app:app"]
+# Jalankan Gunicorn dengan factory function
+CMD ["gunicorn", "--bind", "0.0.0.0:3000", "app:create_app()"]

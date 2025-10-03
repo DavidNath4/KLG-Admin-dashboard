@@ -10,6 +10,18 @@ bp = Blueprint("balances", __name__, url_prefix="/admin")
 def balance_list():
     balances_col = get_col("balances")
     users_col = get_col("users")
+
+    if balances_col is None or users_col is None:
+        flash("Database tidak tersedia. Tidak bisa memuat balances.", "danger")
+        return render_template(
+            "balances.html",
+            title="Balance Management",
+            active="balances",
+            rows=[],
+            refill_units=["seconds", "minutes", "hours", "days", "weeks", "months"],
+            error="Database tidak tersedia."
+        )
+
     users_map = {
         str(u["_id"]): {"email": u.get("email", "-"), "name": u.get("name", "-")}
         for u in users_col.find({}, {"_id": 1, "email": 1, "name": 1})
@@ -44,6 +56,10 @@ def balance_list():
 @bp.route("/balances/<balance_id>/edit", methods=["POST"])
 def edit_balance(balance_id):
     balances_col = get_col("balances")
+
+    if balances_col is None:
+        flash("Database tidak tersedia. Tidak bisa update balance.", "danger")
+        return redirect(url_for("balances.balance_list"))
 
     try:
         # Ambil doc sekarang untuk fallback default

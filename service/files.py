@@ -49,6 +49,25 @@ def file_monitoring():
     page      = max(int(request.args.get("page", 1) or 1), 1)
     per_page  = int(request.args.get("per_page", 20) or 20)
     per_page  = max(min(per_page, 200), 5)
+    
+    if files_col is None:
+        return render_template(
+            "files.html",
+            title="File Monitoring",
+            active="files",
+            rows=[],
+            start=start_str,
+            end=end_str,
+            user=user_str,
+            user_options=[],
+            s=sort_key,
+            o=sort_ord,
+            page=page,
+            per_page=per_page,
+            total=0,
+            total_pages=1,
+            error="Database tidak tersedia. Silakan coba lagi nanti."
+        )
 
     # ---- build query
     query = _build_query(start_str, end_str, user_str)

@@ -22,6 +22,9 @@ def ensure_unique_value(cats_col, base: str) -> str:
 @bp.route("/categories", methods=["GET", "POST"])
 def categories():
     cats_col = get_col(current_app.config["CATS_COL"])
+    if cats_col is None:
+        flash("Database tidak tersedia. Tidak bisa mengakses kategori.")
+        return render_template("categories.html", title="Categories", active="categories", cats=[])
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         if not name:
@@ -49,12 +52,17 @@ def categories():
         flash("Kategori ditambahkan.")
         return redirect(url_for("categories.categories"))
 
-    data = list(get_col(current_app.config["CATS_COL"]).find().sort("order", 1)) if cats_col is not None else []
+    data = list(cats_col.find().sort("order", 1))
     return render_template("categories.html", title="Categories", active="categories", cats=data, cats_col=current_app.config["CATS_COL"])
 
 @bp.post("/categories/<id>/move/<direction>")
 def move_category(id, direction):
     cats_col = get_col(current_app.config["CATS_COL"])
+    
+    if cats_col is None:
+        flash("Database tidak tersedia. Tidak bisa memindahkan kategori.")
+        return redirect(url_for("categories.categories"))
+    
     arr = list(cats_col.find().sort("order", 1))
     idx = next((i for i, c in enumerate(arr) if str(c["_id"]) == id), None)
     if idx is None:
@@ -86,6 +94,9 @@ def move_category(id, direction):
 @bp.post("/categories/<id>/delete")
 def delete_category(id):
     cats_col = get_col(current_app.config["CATS_COL"])
+    if cats_col is None:
+        flash("Database tidak tersedia. Tidak bisa menghapus kategori.")
+        return redirect(url_for("categories.categories"))
     cats_col.delete_one({"_id": ObjectId(id)})
     arr = list(cats_col.find().sort("order", 1))
     for i, c in enumerate(arr, start=1):

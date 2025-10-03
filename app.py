@@ -2,11 +2,6 @@
 from flask import Flask, redirect, url_for
 from dotenv import load_dotenv
 import os
-from flask import send_file
-from bson import ObjectId
-from datetime import datetime, time
-from io import BytesIO
-from openpyxl import Workbook
 
 # Extensions
 from config.mongo import init_mongo, load_db_config
@@ -37,8 +32,11 @@ def create_app():
     app.config["USERS_COL"] = os.getenv("USERS_COL", "users")
     app.config["CATS_COL"] = os.getenv("CATS_COL", "agentcategories")
 
-    # Init Mongo
-    init_mongo(app)
+    # Init Mongo (dengan fallback error handling)
+    try:
+        init_mongo(app)
+    except Exception as e:
+        app.logger.error(f"[Mongo] Gagal inisialisasi: {e}")
 
     # Register Blueprints
     app.register_blueprint(users_bp)
@@ -48,7 +46,7 @@ def create_app():
     app.register_blueprint(files_bp)
     app.register_blueprint(balances_bp)
 
-    # Daftarkan route home (tanpa def dalam def)
+    # Route home
     app.add_url_rule("/", "home", home)
 
     return app
@@ -56,4 +54,8 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=True, port=3000)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 3000)),
+        debug=os.getenv("DEBUG", "false").lower() == "true"
+    )

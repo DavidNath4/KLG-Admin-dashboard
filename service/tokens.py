@@ -26,6 +26,21 @@ def admin_tokens():
     convos_col   = get_col("conversations")
     agents_col   = get_col("agents")
 
+    if any(col is None for col in [users_col, messages_col, convos_col, agents_col]):
+        return render_template(
+            "tokens.html",
+            title="Token Usage",
+            active="tokens",
+            rows=[],
+            agents_list=[],
+            selected_agent=selected_agent,
+            date_from=date_from,
+            date_to=date_to,
+            now_date=date.today().isoformat(),
+            error="Database tidak tersedia. Silakan coba lagi nanti."
+        )
+
+
     # Dropdown agents
     agents_list = list(agents_col.find({}, {"id": 1, "name": 1}).sort("name", 1))
 
