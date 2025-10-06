@@ -70,6 +70,7 @@ def db_settings():
 
         elif action == "apply":
             try:
+                save_db_config(uri, dbname)
                 reload_mongo(current_app, uri, dbname)
                 flash("Koneksi Mongo berhasil di-apply.")
             except Exception as e:
