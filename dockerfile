@@ -1,19 +1,21 @@
 FROM python:3.11-slim
 
-# Set working directory
+# Logging & no .pyc
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=3000
+
 WORKDIR /app
 
-# Copy dependency list
+# Dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy source code
+# App source
 COPY . .
 
-# Expose port (Flask default 3000)
 EXPOSE 3000
 
-# Jalankan Gunicorn dengan factory function
-CMD ["gunicorn", "--bind", "0.0.0.0:3000", "app:create_app()"]
+# Gunicorn: port fleksibel + log ke stdout/stderr
+CMD sh -c 'gunicorn --bind 0.0.0.0:${PORT:-3000} --access-logfile - --error-logfile - app:create_app()'
