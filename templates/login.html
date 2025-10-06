@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% set hide_sidebar = true %}
+{% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-5 col-lg-4">
+      <div class="card shadow-sm mt-5">
+        <div class="card-body">
+          <h4 class="mb-3 text-center">Admin Login</h4>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, msg in messages %}
+                <div class="alert alert-{{ category }} mb-2">{{ msg }}</div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+
+          <form method="post" novalidate>
+            <div class="mb-3">
+              <label class="form-label">Username</label>
+              <input class="form-control" type="text" name="username" required autofocus autocomplete="username">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input class="form-control" type="password" name="password" required autocomplete="current-password">
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Masuk</button>
+          </form>
+
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
