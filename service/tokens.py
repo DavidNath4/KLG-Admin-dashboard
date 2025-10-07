@@ -4,6 +4,7 @@ from io import BytesIO
 import pandas as pd
 from config.mongo import get_col
 from flask import current_app
+from math import ceil
 
 bp = Blueprint("tokens", __name__, url_prefix="/admin")
 
@@ -181,16 +182,32 @@ def admin_tokens():
             download_name=fname,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+    
+    # --- Pagination setup ---
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    total = len(rows)
+    total_pages = ceil(total / per_page) if total > 0 else 1
+
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_rows = rows[start:end]
+
+    now_date = date.today().isoformat()
 
     now_date = date.today().isoformat()
     return render_template(
         "tokens.html",
         title="Token Usage",
         active="tokens",
-        rows=rows,
+        rows=paginated_rows,
         agents_list=agents_list,
         selected_agent=selected_agent,
         date_from=date_from,
         date_to=date_to,
-        now_date=now_date
+        now_date=now_date,
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages
     )
