@@ -61,7 +61,8 @@
       {% endif %}
 
       <!-- Main Content -->
-      <main class="flex-grow-1 p-4" style="margin-left: 240px; overflow-y: auto; height: 100vh;">
+      <main class="flex-grow-1 p-4"style="{% if not hide_sidebar %}margin-left:240px;{% endif %} overflow-y:auto; height:100vh;">
+
         {# Flash global hanya untuk halaman non-login (sidebar tampil) #}
         {% if not hide_sidebar %}
           {% with messages = get_flashed_messages(with_categories=true) %}
