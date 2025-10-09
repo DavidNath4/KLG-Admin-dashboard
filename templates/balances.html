@@ -23,7 +23,7 @@
       <tbody>
         {% for r in rows %}
           <tr data-id="{{ r.id }}" class="row-balance">
-            <td>{{ loop.index }}</td>
+            <td>{{ (page - 1) * per_page + loop.index }}</td>
             <td>{{ r.email }}</td>
             <td>{{ r.name }}</td>
             <td>
@@ -111,6 +111,41 @@
         
     </table>
   </div>
+
+  <!-- REPLACE existing card-footer with this block (matches users page style) -->
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <div>
+      <form method="get" class="d-inline">
+        <input type="hidden" name="q" value="{{ q or '' }}">
+        <input type="hidden" name="sort" value="{{ sort or '' }}">
+        <input type="hidden" name="dir" value="{{ dir or '' }}">
+        <label class="me-2 text-secondary">Per page</label>
+        <select name="per_page" class="form-select d-inline w-auto" onchange="this.form.submit()">
+          {% for n in [5,10,20,50,100] %}
+            <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+          <a class="page-link"
+            href="{{ url_for('balances.balance_list', q=q, sort=sort, dir=dir, page=page-1, per_page=per_page) }}">« Prev</a>
+        </li>
+        <li class="page-item disabled">
+          <span class="page-link">{{ page }}/{{ total_pages }}</span>
+        </li>
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+          <a class="page-link"
+            href="{{ url_for('balances.balance_list', q=q, sort=sort, dir=dir, page=page+1, per_page=per_page) }}">Next »</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+
 </div>
 
 <script>

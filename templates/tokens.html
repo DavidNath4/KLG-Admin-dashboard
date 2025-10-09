@@ -58,7 +58,6 @@
         <tr>
           <th>#</th>
           <th>Date</th>
-          <th>User</th>
           <th>Email</th>
           <th>Model</th>
           <th>Total Tokens</th>
@@ -72,7 +71,6 @@
         <tr>
           <td>{{ (page - 1) * per_page + loop.index }}</td>
           <td>{{ r.date }}</td>
-          <td>{{ r.name or '-' }}</td>
           <td>{{ r.email or '-' }}</td>
           <td>{{ r.model or '-' }}</td>
           <td>{{ r.total_tokens }}</td>

@@ -10,7 +10,6 @@ _SHA1_HEX_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 def verify_password(plain: str, stored: str) -> bool:
     """Verifikasi password:
     - Jika stored = SHA1 hex (40 char), cek sha1(plain) == stored
-    - (Opsional) jika nanti kamu isi format werkzeug (pbkdf2:...), tetap bisa dipakai di masa depan.
     """
     if not stored:
         return False
@@ -24,7 +23,7 @@ def verify_password(plain: str, stored: str) -> bool:
         return False
 
 def _load_creds():
-    """Baca hanya credentials.json sejajar app.py."""
+    """Baca hanya credentials.json"""
     try:
         project_root = Path(current_app.root_path)
     except RuntimeError:

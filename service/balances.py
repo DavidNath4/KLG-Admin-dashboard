@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from bson import ObjectId
 from datetime import datetime
 from config.mongo import get_col
+from math import ceil
 
 bp = Blueprint("balances", __name__, url_prefix="/admin")
 
@@ -26,8 +27,29 @@ def balance_list():
         str(u["_id"]): {"email": u.get("email", "-"), "name": u.get("name", "-")}
         for u in users_col.find({}, {"_id": 1, "email": 1, "name": 1})
     }
+    
+    # === pagination params (tentukan sebelum query ke DB) ===
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+    allowed_per_page = [5, 10, 20, 50, 100]
+    if per_page not in allowed_per_page:
+        per_page = 10
+
+    # total dokumen (untuk menghitung total_pages)
+    total = balances_col.count_documents({})
+
+    total_pages = ceil(total / per_page) if total > 0 else 1
+    if page < 1:
+        page = 1
+    if page > total_pages:
+        page = total_pages
+
+    start = (page - 1) * per_page
+
+    # Ambil hanya dokumen yang diperlukan 
     data = []
-    for b in balances_col.find().sort("tokenCredits", -1):
+    cursor = balances_col.find().sort("tokenCredits", -1).skip(start).limit(per_page)
+    for b in cursor:
         user_id = str(b.get("user"))
         user_info = users_map.get(user_id, {"email": "-", "name": "-"})
         last_refill_dt = b.get("lastRefill")
@@ -43,15 +65,22 @@ def balance_list():
             "refillIntervalValue": b.get("refillIntervalValue", "-"),
             "lastRefill": last_refill
         })
-    # --- untuk dropdown refillIntervalUnit, hardcode default ("days", "weeks", dst)
-    refill_units = ["seconds", "minutes", "hours", "days", "weeks", "months"]  # referensi dari LibreChat docs
+
+    refill_units = ["seconds", "minutes", "hours", "days", "weeks", "months"]
+
+    # kirim juga info pagination ke template
     return render_template(
         "balances.html",
         title="Balance Management",
         active="balances",
         rows=data,
         refill_units=refill_units,
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages
     )
+
 
 @bp.route("/balances/<balance_id>/edit", methods=["POST"])
 def edit_balance(balance_id):

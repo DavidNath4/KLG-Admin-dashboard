@@ -10,12 +10,6 @@ bp = Blueprint("tokens", __name__, url_prefix="/admin")
 
 @bp.route("/tokens")
 def admin_tokens():
-    """
-    Ringkasan pemakaian token per hari, user, model.
-    - Pakai satu koneksi Mongo (extensions.mongo).
-    - Filter by agent (id) & date range.
-    - Export ke XLSX via pandas + openpyxl.
-    """
     rows = []
     selected_agent = request.args.get("agent", "general")
     date_from = request.args.get("date_from", "")
@@ -126,7 +120,6 @@ def admin_tokens():
 
         data.append({
             "date": str(created_at.date()),
-            "name": uinfo.get("name","Unknown"),
             "email": uinfo.get("email"),
             "model": model_name,
             "tokens": in_tokens + out_tokens,
@@ -141,7 +134,6 @@ def admin_tokens():
         daily_usage = (
             df.groupby(["date","email","model"])
               .agg(
-                  name=("name","first"),
                   total_tokens=("tokens","sum"),
                   input_tokens=("input_tokens","sum"),
                   output_tokens=("output_tokens","sum"),
@@ -150,24 +142,20 @@ def admin_tokens():
               .reset_index()
         )
         rows = daily_usage.to_dict(orient="records")
-        rows.sort(key=lambda r: (r["date"], r["email"] or "", r["model"] or ""))
+        rows.sort(key=lambda r: (r["date"], r["email"] or "", r["model"] or ""), reverse=True)
     else:
         rows = []
 
     # Export XLSX
     if request.args.get("export") == "xlsx":
-        try:
-            import openpyxl  # pastikan ada
-        except Exception:
-            return "openpyxl belum terpasang. Jalankan: pip install openpyxl", 500
 
         df_x = pd.DataFrame(rows)
         if df_x.empty:
             df_x = pd.DataFrame(columns=[
-                "date","name","email","model","total_tokens","input_tokens","output_tokens","total_messages"
+                "date","email","model","total_tokens","input_tokens","output_tokens","total_messages"
             ])
 
-        order = ["date","name","email","model","total_tokens","input_tokens","output_tokens","total_messages"]
+        order = ["date","email","model","total_tokens","input_tokens","output_tokens","total_messages"]
         df_x = df_x[[c for c in order if c in df_x.columns]]
 
         bio = BytesIO()
@@ -185,7 +173,7 @@ def admin_tokens():
     
     # --- Pagination setup ---
     page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 20, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
     total = len(rows)
     total_pages = ceil(total / per_page) if total > 0 else 1
 
@@ -195,7 +183,6 @@ def admin_tokens():
 
     now_date = date.today().isoformat()
 
-    now_date = date.today().isoformat()
     return render_template(
         "tokens.html",
         title="Token Usage",
