@@ -9,13 +9,34 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>Email</th>
-          <th>Token Credits</th>
+          <th>
+            <a href="{{ url_for('balances.balance_list', sort='email', dir='asc' if sort!='email' or dir=='desc' else 'desc', page=1, per_page=per_page) }}" class="text-light text-decoration-none">
+              Email
+              {% if sort=='email' %}
+                {% if dir=='asc' %}▲{% else %}▼{% endif %}
+              {% endif %}
+            </a>
+          </th>
+          <th>
+            <a href="{{ url_for('balances.balance_list', sort='tokenCredits', dir='asc' if sort!='tokenCredits' or dir=='desc' else 'desc', page=1, per_page=per_page) }}" class="text-light text-decoration-none">
+              Token Credits
+              {% if sort=='tokenCredits' %}
+                {% if dir=='asc' %}▲{% else %}▼{% endif %}
+              {% endif %}
+            </a>
+          </th>
           <th>Auto Refill</th>
           <th>Refill Amount</th>
           <th>Refill Value</th>
           <th>Refill Unit</th>
-          <th>Last Refill</th>
+          <th>
+            <a href="{{ url_for('balances.balance_list', sort='lastRefill', dir='asc' if sort!='lastRefill' or dir=='desc' else 'desc', page=1, per_page=per_page) }}" class="text-light text-decoration-none">
+              Last Refill
+              {% if sort=='lastRefill' %}
+                {% if dir=='asc' %}▲{% else %}▼{% endif %}
+              {% endif %}
+            </a>
+          </th>
           <th></th>
         </tr>
       </thead>
@@ -130,14 +151,14 @@
       <ul class="pagination pagination-sm mb-0">
         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
           <a class="page-link"
-            href="{{ url_for('balances.balance_list', q=q, sort=sort, dir=dir, page=page-1, per_page=per_page) }}">« Prev</a>
+          href="{{ url_for('balances.balance_list', page=page-1, per_page=per_page, sort=sort, dir=dir) }}">« Prev</a>
         </li>
         <li class="page-item disabled">
           <span class="page-link">{{ page }}/{{ total_pages }}</span>
         </li>
         <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
           <a class="page-link"
-            href="{{ url_for('balances.balance_list', q=q, sort=sort, dir=dir, page=page+1, per_page=per_page) }}">Next »</a>
+          href="{{ url_for('balances.balance_list', page=page+1, per_page=per_page, sort=sort, dir=dir) }}">Next »</a>
         </li>
       </ul>
     </nav>

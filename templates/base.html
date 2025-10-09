@@ -10,11 +10,11 @@
     {% block head_extra %}{% endblock %}
   </head>
   <body class="bg-dark text-light">
-    <div class="d-flex">
+    <div class="d-flex position-relative">
 
       {# Sidebar (disembunyikan jika hide_sidebar=True, mis. di login) #}
       {% if not hide_sidebar %}
-      <aside class="bg-black p-3 min-vh-100 d-flex flex-column" style="width: 240px;">
+      <aside class="bg-black p-3 position-fixed d-flex flex-column" style="width: 240px; height: 100vh; overflow-y: auto;">
         <h2 class="fs-5 text-info mb-4">KLG Librechat Dashboard</h2>
 
         {% if session.get('logged_in') %}
@@ -61,7 +61,7 @@
       {% endif %}
 
       <!-- Main Content -->
-      <main class="flex-grow-1 p-4">
+      <main class="flex-grow-1 p-4" style="margin-left: 240px; overflow-y: auto; height: 100vh;">
         {# Flash global hanya untuk halaman non-login (sidebar tampil) #}
         {% if not hide_sidebar %}
           {% with messages = get_flashed_messages(with_categories=true) %}

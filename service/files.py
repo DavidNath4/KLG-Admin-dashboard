@@ -46,7 +46,7 @@ def file_monitoring():
     sort_key  = request.args.get("s", "createdAt").strip()     # createdAt|filename|type|bytes|user
     sort_ord  = request.args.get("o", "desc").strip()          # asc|desc
     page      = max(int(request.args.get("page", 1) or 1), 1)
-    per_page  = int(request.args.get("per_page", 20) or 20)
+    per_page  = int(request.args.get("per_page", 10) or 10)
     per_page  = max(min(per_page, 200), 5)
 
     # ---- build query

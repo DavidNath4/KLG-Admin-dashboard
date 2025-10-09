@@ -1,11 +1,12 @@
 # service/balances.py
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from bson import ObjectId
 from datetime import datetime
 from config.mongo import get_col
 from math import ceil
 
 bp = Blueprint("balances", __name__, url_prefix="/admin")
+
 
 @bp.route("/balances")
 def balance_list():
@@ -23,37 +24,49 @@ def balance_list():
             error="Database tidak tersedia."
         )
 
+    # --- Preload user map ---
     users_map = {
         str(u["_id"]): {"email": u.get("email", "-"), "name": u.get("name", "-")}
         for u in users_col.find({}, {"_id": 1, "email": 1, "name": 1})
     }
-    
-    # === pagination params (tentukan sebelum query ke DB) ===
-    page = request.args.get("page", 1, type=int)
+
+    # === Pagination params ===
+    page = max(request.args.get("page", 1, type=int), 1)
     per_page = request.args.get("per_page", 10, type=int)
     allowed_per_page = [5, 10, 20, 50, 100]
     if per_page not in allowed_per_page:
         per_page = 10
 
-    # total dokumen (untuk menghitung total_pages)
     total = balances_col.count_documents({})
-
-    total_pages = ceil(total / per_page) if total > 0 else 1
-    if page < 1:
-        page = 1
+    total_pages = max(ceil(total / per_page), 1)
     if page > total_pages:
         page = total_pages
-
     start = (page - 1) * per_page
 
-    # Ambil hanya dokumen yang diperlukan 
+    # === Sorting params ===
+    sort_field = request.args.get("sort", "tokenCredits")
+    sort_dir = request.args.get("dir", "desc")
+    allowed_sorts = ["tokenCredits", "email", "lastRefill"]
+    if sort_field not in allowed_sorts:
+        sort_field = "tokenCredits"
+    reverse = (sort_dir != "asc")
+
+    # --- Ambil data balances (skip/limit dulu agar tidak berat) ---
+    cursor = balances_col.find({}, {
+        "user": 1,
+        "tokenCredits": 1,
+        "autoRefillEnabled": 1,
+        "refillAmount": 1,
+        "refillIntervalUnit": 1,
+        "refillIntervalValue": 1,
+        "lastRefill": 1
+    }).skip(start).limit(per_page)
+
     data = []
-    cursor = balances_col.find().sort("tokenCredits", -1).skip(start).limit(per_page)
     for b in cursor:
         user_id = str(b.get("user"))
         user_info = users_map.get(user_id, {"email": "-", "name": "-"})
         last_refill_dt = b.get("lastRefill")
-        last_refill = last_refill_dt.strftime("%Y-%m-%d") if last_refill_dt else "-"
         data.append({
             "id": str(b["_id"]),
             "email": user_info["email"],
@@ -62,12 +75,23 @@ def balance_list():
             "refillAmount": b.get("refillAmount", 0),
             "refillIntervalUnit": b.get("refillIntervalUnit", "-"),
             "refillIntervalValue": b.get("refillIntervalValue", "-"),
-            "lastRefill": last_refill
+            "lastRefill": last_refill_dt or datetime.min
         })
+
+    # === Sorting di Python (karena email bukan field di DB) ===
+    if sort_field == "email":
+        data.sort(key=lambda x: (x.get("email") or "").lower(), reverse=reverse)
+    elif sort_field == "lastRefill":
+        data.sort(key=lambda x: x.get("lastRefill") or datetime.min, reverse=reverse)
+    else:
+        data.sort(key=lambda x: float(x.get("tokenCredits", 0)), reverse=reverse)
+
+    # Format lastRefill jadi string untuk ditampilkan
+    for d in data:
+        d["lastRefill"] = d["lastRefill"].strftime("%Y-%m-%d") if d["lastRefill"] != datetime.min else "-"
 
     refill_units = ["seconds", "minutes", "hours", "days", "weeks", "months"]
 
-    # kirim juga info pagination ke template
     return render_template(
         "balances.html",
         title="Balance Management",
@@ -77,7 +101,9 @@ def balance_list():
         page=page,
         per_page=per_page,
         total=total,
-        total_pages=total_pages
+        total_pages=total_pages,
+        sort=sort_field,
+        dir=sort_dir
     )
 
 
@@ -89,37 +115,32 @@ def edit_balance(balance_id):
         flash("Database tidak tersedia. Tidak bisa update balance.", "danger")
         return redirect(url_for("balances.balance_list"))
 
-    try:        
+    try:
         cur = balances_col.find_one({"_id": ObjectId(balance_id)}, {"tokenCredits": 1})
-
         if not cur:
             flash("Data balance tidak ditemukan.", "danger")
             return redirect(url_for("balances.balance_list"))
 
-        # --- Parse & sanitize input ---
         raw_tokens = (request.form.get("tokenCredits", "") or "").replace(",", "").strip()
-        raw_tokens = raw_tokens.replace(" ", "")
         try:
             tokenCredits = float(raw_tokens)
         except ValueError:
             tokenCredits = float(cur.get("tokenCredits", 0))
-        
+
         if tokenCredits < 0:
             flash("Token balance tidak boleh negatif.", "danger")
             return redirect(url_for("balances.balance_list"))
 
-        # --- Update ---
         balances_col.update_one(
             {"_id": ObjectId(balance_id)},
             {"$set": {
-                "tokenCredits": float(tokenCredits),                
+                "tokenCredits": float(tokenCredits),
                 "lastRefill": datetime.utcnow()
             }}
         )
         flash("Token balance updated successfully.", "success")
 
     except Exception as e:
-        # BadRequestKeyError, ValueError, dsb. tertangkap di sini
         flash(f"Update failed: {e}", "danger")
 
     return redirect(url_for("balances.balance_list"))
