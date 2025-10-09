@@ -10,10 +10,10 @@
   }
   
   .list-group-item-action:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.05) !important;
   }
   
   .active-link:hover {
-    background-color: rgba(0, 123, 255, 0.25);
+    background-color: rgba(0, 123, 255, 0.25) !important;
   }
   
