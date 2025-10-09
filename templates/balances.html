@@ -10,7 +10,6 @@
         <tr>
           <th>#</th>
           <th>Email</th>
-          <th>Name</th>
           <th>Token Credits</th>
           <th>Auto Refill</th>
           <th>Refill Amount</th>
@@ -24,8 +23,7 @@
         {% for r in rows %}
           <tr data-id="{{ r.id }}" class="row-balance">
             <td>{{ (page - 1) * per_page + loop.index }}</td>
-            <td>{{ r.email }}</td>
-            <td>{{ r.name }}</td>
+            <td>{{ r.email }}</td>            
             <td>
               <span class="view-mode">{{ "{:.2f}".format(r.tokenCredits) }}</span>
               <input type="text"

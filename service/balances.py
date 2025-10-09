@@ -57,7 +57,6 @@ def balance_list():
         data.append({
             "id": str(b["_id"]),
             "email": user_info["email"],
-            "name": user_info["name"],
             "tokenCredits": b.get("tokenCredits", 0),
             "autoRefillEnabled": b.get("autoRefillEnabled", False),
             "refillAmount": b.get("refillAmount", 0),
@@ -90,59 +89,34 @@ def edit_balance(balance_id):
         flash("Database tidak tersedia. Tidak bisa update balance.", "danger")
         return redirect(url_for("balances.balance_list"))
 
-    try:
-        # Ambil doc sekarang untuk fallback default
-        cur = balances_col.find_one({"_id": ObjectId(balance_id)}, {
-            "refillAmount": 1,
-            "refillIntervalUnit": 1,
-            "refillIntervalValue": 1,
-            "tokenCredits": 1,
-            "autoRefillEnabled": 1
-        }) or {}
+    try:        
+        cur = balances_col.find_one({"_id": ObjectId(balance_id)}, {"tokenCredits": 1})
+
+        if not cur:
+            flash("Data balance tidak ditemukan.", "danger")
+            return redirect(url_for("balances.balance_list"))
 
         # --- Parse & sanitize input ---
         raw_tokens = (request.form.get("tokenCredits", "") or "").replace(",", "").strip()
         raw_tokens = raw_tokens.replace(" ", "")
-        tokenCredits = float(raw_tokens) if raw_tokens not in ("", ".", "-") else float(cur.get("tokenCredits", 0))
-
-        autoRefillEnabled = (request.form.get("autoRefillEnabled", "off") == "on")
-
-        # gunakan get() agar tidak 400 jika field tidak terkirim (disabled)
-        refillAmount = request.form.get("refillAmount", None)
-        refillIntervalValue = request.form.get("refillIntervalValue", None)
-        refillIntervalUnit = request.form.get("refillIntervalUnit", None)
-
-        # fallback ke nilai existing bila None/empty
         try:
-            refillAmount = int(refillAmount) if refillAmount not in (None, "") else int(cur.get("refillAmount", 0))
+            tokenCredits = float(raw_tokens)
         except ValueError:
-            refillAmount = int(cur.get("refillAmount", 0))
-
-        try:
-            refillIntervalValue = int(refillIntervalValue) if refillIntervalValue not in (None, "") else int(cur.get("refillIntervalValue", 0))
-        except ValueError:
-            refillIntervalValue = int(cur.get("refillIntervalValue", 0))
-
-        refillIntervalUnit = (refillIntervalUnit or cur.get("refillIntervalUnit", "days"))
-
-        # Jika OFF, paksa amount/value ke 0 (unit boleh dibiarkan)
-        if not autoRefillEnabled:
-            refillAmount = 0
-            refillIntervalValue = 0
+            tokenCredits = float(cur.get("tokenCredits", 0))
+        
+        if tokenCredits < 0:
+            flash("Token balance tidak boleh negatif.", "danger")
+            return redirect(url_for("balances.balance_list"))
 
         # --- Update ---
         balances_col.update_one(
             {"_id": ObjectId(balance_id)},
             {"$set": {
-                "tokenCredits": float(tokenCredits),
-                "autoRefillEnabled": bool(autoRefillEnabled),
-                "refillAmount": int(refillAmount),
-                "refillIntervalUnit": str(refillIntervalUnit),
-                "refillIntervalValue": int(refillIntervalValue),
+                "tokenCredits": float(tokenCredits),                
                 "lastRefill": datetime.utcnow()
             }}
         )
-        flash("Balance updated!", "success")
+        flash("Token balance updated successfully.", "success")
 
     except Exception as e:
         # BadRequestKeyError, ValueError, dsb. tertangkap di sini
