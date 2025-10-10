@@ -3,7 +3,7 @@ from bson import ObjectId
 from config.mongo import get_col
 from datetime import datetime
 
-bp = Blueprint("users", __name__, url_prefix="/admin")
+bp = Blueprint("users", __name__, url_prefix="/admin-klg/admin")
 
 @bp.route("/users", methods=["GET", "POST"])
 def admin_users():

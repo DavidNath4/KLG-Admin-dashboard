@@ -7,7 +7,7 @@ from bson import ObjectId
 from config.mongo import get_col
 from utils.helper import parse_date, human_bytes
 
-bp = Blueprint("files", __name__, url_prefix="/admin")
+bp = Blueprint("files", __name__, url_prefix="/admin-klg/admin")
 
 
 def _build_query(start_str: str, end_str: str, user_str: str) -> dict:

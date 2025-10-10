@@ -33,7 +33,7 @@ def save_db_config(uri: str, dbname: str):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2)
 
-bp = Blueprint("settings", __name__, url_prefix="/admin")
+bp = Blueprint("settings", __name__, url_prefix="/admin-klg/admin")
 
 @bp.route("/settings", methods=["GET", "POST"])
 def db_settings():

@@ -6,7 +6,7 @@ from config.mongo import get_col
 from flask import current_app
 from math import ceil
 
-bp = Blueprint("tokens", __name__, url_prefix="/admin")
+bp = Blueprint("tokens", __name__, url_prefix="/admin-klg/admin")
 
 @bp.route("/tokens")
 def admin_tokens():

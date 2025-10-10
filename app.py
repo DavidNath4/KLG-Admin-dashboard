@@ -30,6 +30,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         PERMANENT_SESSION_LIFETIME=3600,  # 1 jam
+        SESSION_REFRESH_EACH_REQUEST=True
     )
 
     app.secret_key = os.getenv("SECRET_KEY", "super-secret")
@@ -71,14 +72,14 @@ def create_app():
         if allowed:
             return
         # jika akses /admin/* tapi belum login -> redirect ke /login?next=<path>
-        if path.startswith("/admin/") and not session.get("logged_in"):
+        if path.startswith("/admin-klg/admin/") and not session.get("logged_in"):
             return redirect(url_for("auth.login", next=path))
         
     
     @app.after_request
     def add_no_cache(resp):
         p = request.path or ""
-        if p.startswith("/admin/"):
+        if p.startswith("/admin-klg/admin/"):
             resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             resp.headers["Pragma"] = "no-cache"
             resp.headers["Expires"] = "0"

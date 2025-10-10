@@ -1,23 +1,15 @@
 # service/auth.py
 from flask import Blueprint, render_template, request, redirect, url_for, session, current_app, flash
 from pathlib import Path
-import json, hashlib, re
+import json
+from werkzeug.security import check_password_hash, generate_password_hash
 
 bp = Blueprint("auth", __name__, url_prefix="")
 
-_SHA1_HEX_RE = re.compile(r"^[0-9a-fA-F]{40}$")
-
 def verify_password(plain: str, stored: str) -> bool:
-    """Verifikasi password:
-    - Jika stored = SHA1 hex (40 char), cek sha1(plain) == stored
-    """
     if not stored:
         return False
-    if _SHA1_HEX_RE.match(stored):
-        return hashlib.sha1(plain.encode("utf-8")).hexdigest().lower() == stored.lower()
-    # fallback: dukung hash werkzeug kalau suatu saat diganti
     try:
-        from werkzeug.security import check_password_hash
         return check_password_hash(stored, plain)
     except Exception:
         return False
@@ -53,6 +45,7 @@ def login():
             flash("Kredensial belum dikonfigurasi di credentials.json.", "danger")
             return redirect(url_for("auth.login", next=request.args.get("next")))
         if username == cfg_user and verify_password(password, cfg_pw_hash):
+            session.permanent = True
             session["logged_in"] = True
             session["admin_username"] = username
             flash("Berhasil masuk.", "success")
@@ -73,6 +66,4 @@ def dev_hash():
     pwd = request.args.get("p")
     if not pwd:
         return "masukkan ?p=password", 400
-    import hashlib
-    return hashlib.sha1(pwd.encode()).hexdigest(), 200, {"Content-Type": "text/plain; charset=utf-8"}
-
+    return generate_password_hash(pwd), 200, {"Content-Type": "text/plain; charset=utf-8"}

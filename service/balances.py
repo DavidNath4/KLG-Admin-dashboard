@@ -5,7 +5,7 @@ from datetime import datetime
 from config.mongo import get_col
 from math import ceil
 
-bp = Blueprint("balances", __name__, url_prefix="/admin")
+bp = Blueprint("balances", __name__, url_prefix="/admin-klg/admin")
 
 
 @bp.route("/balances")
@@ -51,7 +51,7 @@ def balance_list():
         sort_field = "tokenCredits"
     reverse = (sort_dir != "asc")
 
-    # --- Ambil data balances (skip/limit dulu agar tidak berat) ---
+    # --- Ambil data balances---
     cursor = balances_col.find({}, {
         "user": 1,
         "tokenCredits": 1,
@@ -78,7 +78,7 @@ def balance_list():
             "lastRefill": last_refill_dt or datetime.min
         })
 
-    # === Sorting di Python (karena email bukan field di DB) ===
+    # === Sorting===
     if sort_field == "email":
         data.sort(key=lambda x: (x.get("email") or "").lower(), reverse=reverse)
     elif sort_field == "lastRefill":

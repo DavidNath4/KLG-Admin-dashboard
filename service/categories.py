@@ -5,7 +5,7 @@ from config.mongo import get_col
 from utils.helper import kebab
 import uuid
 
-bp = Blueprint("categories", __name__, url_prefix="/admin")
+bp = Blueprint("categories", __name__, url_prefix="/admin-klg/admin")
 
 def next_order(cats_col):
     last = list(cats_col.find().sort("order", -1).limit(1))
