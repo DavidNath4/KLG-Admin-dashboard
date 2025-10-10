@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 from werkzeug.security import check_password_hash, generate_password_hash
 
-bp = Blueprint("auth", __name__, url_prefix="")
+bp = Blueprint("auth", __name__, url_prefix="/admin-klg")
 
 def verify_password(plain: str, stored: str) -> bool:
     if not stored:
