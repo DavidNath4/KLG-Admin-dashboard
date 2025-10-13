@@ -4,6 +4,7 @@ from bson import ObjectId
 from datetime import datetime
 from config.mongo import get_col
 from math import ceil
+import re
 
 bp = Blueprint("balances", __name__, url_prefix="/admin-klg/admin")
 
@@ -21,14 +22,14 @@ def balance_list():
             active="balances",
             rows=[],
             refill_units=["seconds", "minutes", "hours", "days", "weeks", "months"],
-            error="Database tidak tersedia."
+            error="Database tidak tersedia.",
+            q="",
+            page=1, per_page=10, total=0, total_pages=1,
+            sort="tokenCredits", dir="desc"
         )
 
-    # --- Preload user map ---
-    users_map = {
-        str(u["_id"]): {"email": u.get("email", "-"), "name": u.get("name", "-")}
-        for u in users_col.find({}, {"_id": 1, "email": 1, "name": 1})
-    }
+    # --- Query param: search email ---
+    q = (request.args.get("q", "") or "").strip()
 
     # === Pagination params ===
     page = max(request.args.get("page", 1, type=int), 1)
@@ -36,12 +37,6 @@ def balance_list():
     allowed_per_page = [5, 10, 20, 50, 100]
     if per_page not in allowed_per_page:
         per_page = 10
-
-    total = balances_col.count_documents({})
-    total_pages = max(ceil(total / per_page), 1)
-    if page > total_pages:
-        page = total_pages
-    start = (page - 1) * per_page
 
     # === Sorting params ===
     sort_field = request.args.get("sort", "tokenCredits")
@@ -51,22 +46,68 @@ def balance_list():
         sort_field = "tokenCredits"
     reverse = (sort_dir != "asc")
 
-    # --- Ambil data balances---
-    cursor = balances_col.find({}, {
-        "user": 1,
-        "tokenCredits": 1,
-        "autoRefillEnabled": 1,
-        "refillAmount": 1,
-        "refillIntervalUnit": 1,
-        "refillIntervalValue": 1,
-        "lastRefill": 1
-    }).skip(start).limit(per_page)
+    # --- Preload user map (id->info) ---
+    users_map = {
+        str(u["_id"]): {"email": u.get("email", "-"), "name": u.get("name", "-")}
+        for u in users_col.find({}, {"_id": 1, "email": 1, "name": 1})
+    }
+
+    # --- Build filter untuk balances berdasarkan q (email) ---
+    bal_filter = {}
+    if q:
+        # Cari users yang emailnya match (case-insensitive)
+        email_regex = {"$regex": re.escape(q), "$options": "i"}
+        matched_users = list(users_col.find({"email": email_regex}, {"_id": 1}))
+        if not matched_users:
+            # Tidak ada user cocok -> 0 hasil
+            return render_template(
+                "balances.html",
+                title="Balance Management",
+                active="balances",
+                rows=[],
+                refill_units=["seconds", "minutes", "hours", "days", "weeks", "months"],
+                q=q,
+                page=page, per_page=per_page,
+                total=0, total_pages=1,
+                sort=sort_field, dir=sort_dir
+            )
+
+        oid_list = [u["_id"] for u in matched_users]
+        str_list = [str(u["_id"]) for u in matched_users]
+        # Robust: dukung dokumen balances.user sebagai ObjectId atau string
+        bal_filter = {"$or": [
+            {"user": {"$in": oid_list}},
+            {"user": {"$in": str_list}},
+        ]}
+
+    # === Count total sesuai filter ===
+    total = balances_col.count_documents(bal_filter)
+    total_pages = max(ceil(total / per_page), 1)
+    if page > total_pages:
+        page = total_pages
+    start = (page - 1) * per_page
+
+    # --- Ambil data balances sesuai filter + page ---
+    cursor = balances_col.find(
+        bal_filter,
+        {
+            "user": 1,
+            "tokenCredits": 1,
+            "autoRefillEnabled": 1,
+            "refillAmount": 1,
+            "refillIntervalUnit": 1,
+            "refillIntervalValue": 1,
+            "lastRefill": 1
+        }
+    ).skip(start).limit(per_page)
 
     data = []
     for b in cursor:
-        user_id = str(b.get("user"))
-        user_info = users_map.get(user_id, {"email": "-", "name": "-"})
+        user_id_raw = b.get("user")
+        user_id_str = str(user_id_raw)
+        user_info = users_map.get(user_id_str, {"email": "-", "name": "-"})
         last_refill_dt = b.get("lastRefill")
+
         data.append({
             "id": str(b["_id"]),
             "email": user_info["email"],
@@ -78,7 +119,7 @@ def balance_list():
             "lastRefill": last_refill_dt or datetime.min
         })
 
-    # === Sorting===
+    # === Sorting (di memory) ===
     if sort_field == "email":
         data.sort(key=lambda x: (x.get("email") or "").lower(), reverse=reverse)
     elif sort_field == "lastRefill":
@@ -98,6 +139,7 @@ def balance_list():
         active="balances",
         rows=data,
         refill_units=refill_units,
+        q=q,
         page=page,
         per_page=per_page,
         total=total,

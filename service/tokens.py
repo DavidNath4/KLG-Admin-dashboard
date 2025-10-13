@@ -5,6 +5,7 @@ import pandas as pd
 from config.mongo import get_col
 from flask import current_app
 from math import ceil
+import re
 
 bp = Blueprint("tokens", __name__, url_prefix="/admin-klg/admin")
 
@@ -14,6 +15,8 @@ def admin_tokens():
     selected_agent = request.args.get("agent", "general")
     date_from = request.args.get("date_from", "")
     date_to   = request.args.get("date_to", "")
+    q = (request.args.get("q", "") or "").strip()
+
 
     # Collections
     users_col    = get_col(current_app.config["USERS_COL"])
@@ -77,6 +80,29 @@ def admin_tokens():
             pass
     if created_range:
         assistants_query["createdAt"] = created_range
+
+    # Filter by email (q) --> temukan user _id yang cocok, lalu filter messages.user
+    if q:
+        email_regex = {"$regex": re.escape(q), "$options": "i"}
+        matched_users = list(users_col.find({"email": email_regex}, {"_id": 1}))
+        if not matched_users:
+            # Tidak ada user yang cocok
+            return render_template(
+                "tokens.html",
+                title="Token Usage",
+                active="tokens",
+                rows=[],
+                agents_list=agents_list,
+                selected_agent=selected_agent,
+                date_from=date_from,
+                date_to=date_to,
+                now_date=date.today().isoformat(),
+                page=1, per_page=10, total=0, total_pages=1,
+                q=q
+            )
+        oid_list = [u["_id"] for u in matched_users]
+        str_list = [str(u["_id"]) for u in matched_users]
+        assistants_query["user"] = {"$in": oid_list + str_list}
 
     assistants = list(
         messages_col.find(
@@ -221,5 +247,6 @@ def admin_tokens():
         page=page,
         per_page=per_page,
         total=total,
-        total_pages=total_pages
+        total_pages=total_pages,
+        q=q
     )

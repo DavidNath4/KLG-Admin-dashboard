@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h3 class="mb-3">Daily User Token Usage</h3>
-<p class="text-secondary">Token usage dihitung dari messages collection, dikelompokkan per tanggal, user, dan model.</p>
+<p class="text-secondary">Token usage dihitung dari messages collection, dikelompokkan per tanggal, user, dan agent.</p>
 
 <form method="get" class="mb-3">
   <div class="row gy-2 gx-2 align-items-end">
@@ -28,6 +28,11 @@
       <input type="date" class="form-control" name="date_to" value="{{ date_to or '' }}" max="{{ now_date }}">
     </div>
 
+    <div class="col-12 col-md-3">
+      <label class="form-label">Search email</label>
+      <input class="form-control" type="text" name="q" placeholder="e.g. john@company.com" value="{{ q or '' }}">
+    </div>
+
     <!-- Apply / Clear / Export -->
     <div class="col-12 col-md-2 d-flex gap-2">
       <button class="btn btn-primary btn-sm flex-fill" type="submit">
@@ -36,7 +41,8 @@
       <a class="btn btn-outline-secondary btn-sm flex-fill" href="{{ url_for('tokens.admin_tokens') }}">
         Clear
       </a>
-      <a class="btn btn-success btn-sm flex-fill" href="{{ url_for('tokens.admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, export='xlsx') }}">
+      <a class="btn btn-success btn-sm flex-fill"
+        href="{{ url_for('tokens.admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, q=q, export='xlsx') }}">
         Export
       </a>
     </div>
@@ -96,6 +102,7 @@
         <input type="hidden" name="agent" value="{{ selected_agent }}">
         <input type="hidden" name="date_from" value="{{ date_from }}">
         <input type="hidden" name="date_to" value="{{ date_to }}">
+        <input type="hidden" name="q" value="{{ q or '' }}">
         <label class="me-2 text-secondary">Per page</label>
         <select name="per_page" class="form-select d-inline w-auto" onchange="this.form.submit()">
           {% for n in [5,10,20,50,100] %}
@@ -108,14 +115,14 @@
       <ul class="pagination pagination-sm mb-0">
         <li class="page-item {% if page <= 1 %}disabled{% endif %}">
           <a class="page-link"
-             href="{{ url_for('tokens.admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, page=page-1, per_page=per_page) }}">« Prev</a>
+             href="{{ url_for('tokens.admin_tokens', q=q, agent=selected_agent, date_from=date_from, date_to=date_to, page=page-1, per_page=per_page) }}">« Prev</a>
         </li>
         <li class="page-item disabled">
           <span class="page-link">{{ page }}/{{ total_pages }}</span>
         </li>
         <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
           <a class="page-link"
-             href="{{ url_for('tokens.admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, page=page+1, per_page=per_page) }}">Next »</a>
+             href="{{ url_for('tokens.admin_tokens', q=q, agent=selected_agent, date_from=date_from, date_to=date_to, page=page+1, per_page=per_page) }}">Next »</a>
         </li>
       </ul>
     </nav>
