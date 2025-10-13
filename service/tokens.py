@@ -45,6 +45,11 @@ def admin_tokens():
         for a in agents_col.find({}, {"id": 1, "model": 1})
     }
 
+    agent_name_by_id = {
+        a["id"]: a.get("name")
+        for a in agents_col.find({}, {"id": 1, "name": 1})
+    }
+
     # Cache user { userId(str): {name, email} }
     users_cache = {
         str(u["_id"]): {"name": u.get("name", "Unknown"), "email": u.get("email")}
@@ -104,6 +109,13 @@ def admin_tokens():
         mid_or_name = m.get("model")
         model_name = agents_map.get(mid_or_name, mid_or_name or "Unknown Model")
 
+        agent_name = agent_name_by_id.get(mid_or_name)
+        is_agent = bool(agent_name)
+
+        agent_label = agent_name if is_agent else "General"
+        model_label = model_name              # <-- ini KUNCI: jangan "Unknown Model" saat general
+
+
         created_at = m.get("createdAt") or convos_map.get(str(m.get("conversationId")))
         if not created_at:
             continue
@@ -122,6 +134,9 @@ def admin_tokens():
             "date": str(created_at.date()),
             "email": uinfo.get("email"),
             "model": model_name,
+            "agent_name": agent_name,
+            "agent_label": agent_label,
+            "model_label": model_label,
             "tokens": in_tokens + out_tokens,
             "input_tokens": in_tokens,
             "output_tokens": out_tokens,
@@ -132,17 +147,27 @@ def admin_tokens():
     df = pd.DataFrame(data)
     if not df.empty:
         daily_usage = (
-            df.groupby(["date","email","model"])
-              .agg(
-                  total_tokens=("tokens","sum"),
-                  input_tokens=("input_tokens","sum"),
-                  output_tokens=("output_tokens","sum"),
-                  total_messages=("messages_in_turn","sum"),
-              )
-              .reset_index()
+            df.groupby(["date","email","agent_label","model_label"])
+            .agg(
+                agent_name=("agent_name","first"),
+                total_tokens=("tokens","sum"),
+                input_tokens=("input_tokens","sum"),
+                output_tokens=("output_tokens","sum"),
+                total_messages=("messages_in_turn","sum"),
+            )
+            .reset_index()
         )
+
         rows = daily_usage.to_dict(orient="records")
-        rows.sort(key=lambda r: (r["date"], r["email"] or "", r["model"] or ""), reverse=True)
+        rows.sort(
+            key=lambda r: (
+                r["date"],
+                r["email"] or "",
+                r["agent_label"] or "",
+                r["model_label"] or "",
+            ),
+            reverse=True
+        )
     else:
         rows = []
 
@@ -155,7 +180,7 @@ def admin_tokens():
                 "date","email","model","total_tokens","input_tokens","output_tokens","total_messages"
             ])
 
-        order = ["date","email","model","total_tokens","input_tokens","output_tokens","total_messages"]
+        order = ["date","email","agent_label","model_label","total_tokens","input_tokens","output_tokens","total_messages"]
         df_x = df_x[[c for c in order if c in df_x.columns]]
 
         bio = BytesIO()
