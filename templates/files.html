@@ -77,7 +77,7 @@
   <div class="d-flex gap-2 mb-3">
     <a class="btn btn-outline-success"
        href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s=s, o=o, export=1) }}">
-      <i class="bi bi-file-earmark-excel me-1"></i> Export ke Excel
+      <i class="bi bi-file-earmark-excel me-1"></i> Export
     </a>
     <a class="btn btn-outline-secondary" href="{{ url_for('files.file_monitoring') }}">Reset</a>
   </div>
@@ -114,10 +114,11 @@
                 Size {% if s == 'bytes' %}<small class="text-secondary">({{ o }})</small>{% endif %}
               </a>
             </th>
+            <th>Agent</th>
             <th>
               <a class="link-light text-decoration-none"
                  href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='user', o=new_o, page=1, per_page=per_page) }}">
-                User {% if s == 'user' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+                Uploaded by {% if s == 'user' %}<small class="text-secondary">({{ o }})</small>{% endif %}
               </a>
             </th>
           </tr>
@@ -127,16 +128,17 @@
             {% for r in rows %}
             <tr>
               <td>{{ (page - 1) * per_page + loop.index }}</td>
-              <td>{{ r.createdAt.strftime('%Y-%m-%d %H:%M') if r.createdAt else '-' }}</td>
+              <td>{{ r.createdAt.strftime('%Y-%m-%d') if r.createdAt else '-' }}</td>
               <td class="fw-semibold">{{ r.filename or '-' }}</td>
               <td><code>{{ r.type or '-' }}</code></td>
               <td class="text-end">{{ r.size_h or '-' }}</td>
+              <td>{{ r.agent or '-' }}</td>
               <td>{{ r.user or '-' }}</td>
             </tr>
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="6" class="text-center text-secondary py-4">Tidak ada data untuk filter ini.</td>
+              <td colspan="7" class="text-center text-secondary py-4">Tidak ada data untuk filter ini.</td>
             </tr>
           {% endif %}
         </tbody>

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <h3 class="mb-3">Daily User Token Usage</h3>
-<p class="text-secondary">Token usage dihitung dari messages collection, dikelompokkan per tanggal, user, dan agent.</p>
+<p class="text-secondary">Token usage dihitung dari messages collection, diGroupBy per Date, Email, dan Agent.</p>
 
 <form method="get" class="mb-3">
   <div class="row gy-2 gx-2 align-items-end">
@@ -30,20 +30,20 @@
 
     <div class="col-12 col-md-3">
       <label class="form-label">Search email</label>
-      <input class="form-control" type="text" name="q" placeholder="e.g. john@company.com" value="{{ q or '' }}">
+      <input class="form-control" type="text" name="q" placeholder="" value="{{ q or '' }}">
     </div>
 
     <!-- Apply / Clear / Export -->
-    <div class="col-12 col-md-2 d-flex gap-2">
+    <div class="col-12 col-md-3 d-flex gap-3">
       <button class="btn btn-primary btn-sm flex-fill" type="submit">
-        <i class="bi bi-check2 me-1"></i>Apply
+        Apply
       </button>
       <a class="btn btn-outline-secondary btn-sm flex-fill" href="{{ url_for('tokens.admin_tokens') }}">
         Clear
       </a>
       <a class="btn btn-success btn-sm flex-fill"
         href="{{ url_for('tokens.admin_tokens', agent=selected_agent, date_from=date_from, date_to=date_to, q=q, export='xlsx') }}">
-        Export
+        <i class="bi bi-file-earmark-excel me-1"></i> Export
       </a>
     </div>
   </div>
@@ -51,7 +51,7 @@
 
 <style>
   .btn-sm {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     padding: 0.25rem 0.5rem;
   }
 </style>

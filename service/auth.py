@@ -14,23 +14,25 @@ def verify_password(plain: str, stored: str) -> bool:
     except Exception:
         return False
 
-def _load_creds():
-    """Baca hanya credentials.json"""
+def _load_creds(username: str):
     try:
         project_root = Path(current_app.root_path)
     except RuntimeError:
         project_root = Path(__file__).resolve().parents[1]
     json_path = (project_root / "credentials.json").resolve()
-    current_app.logger.info(f"[Auth] Loading creds from: {json_path}")
+    current_app.logger.info(f"[Auth] Loading creds")
     if not json_path.exists():
-        current_app.logger.error(f"[Auth] credentials.json tidak ditemukan: {json_path}")
+        current_app.logger.error(f"[Auth] credentials file not found")
         return None, None
     try:
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data.get("username"), data.get("password_hash")
+            for cred in data:
+                if username == cred.get("username"):
+                    return cred.get("username"), cred.get("password_hash")
+            return None, None  
     except Exception as e:
-        current_app.logger.error(f"[Auth] Gagal baca {json_path}: {e}")
+        current_app.logger.error(f"[Auth] failed to read creds: {e}")
         return None, None
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -40,25 +42,25 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        cfg_user, cfg_pw_hash = _load_creds()
+        cfg_user, cfg_pw_hash = _load_creds(username)
         if not cfg_user or not cfg_pw_hash:
-            flash("Kredensial belum dikonfigurasi di credentials.json.", "danger")
+            flash("Kredensial belum dikonfigurasi", "danger")
             return redirect(url_for("auth.login", next=request.args.get("next")))
         if username == cfg_user and verify_password(password, cfg_pw_hash):
             session.permanent = True
             session["logged_in"] = True
             session["admin_username"] = username
-            flash("Berhasil masuk.", "success")
+            flash("Login success.", "success")
             next_url = request.args.get("next") or url_for("users.admin_users")
             return redirect(next_url)
-        flash("Username atau password salah.", "danger")
+        flash("Wrong username or password.", "danger")
         return redirect(url_for("auth.login", next=request.args.get("next")))
     return render_template("login.html", hide_sidebar=True)
 
 @bp.route("/logout", methods=["POST", "GET"])
 def logout():
     session.clear()
-    flash("Anda telah keluar.", "info")
+    flash("Logout Success.", "info")
     return redirect(url_for("auth.login"))
 
 @bp.route("/_dev/hash", methods=["GET"])

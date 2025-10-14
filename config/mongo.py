@@ -8,14 +8,12 @@ _client = None
 _db = None
 
 def load_db_config():
-    """Load konfigurasi MongoDB dari file JSON, fallback ke default."""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"MONGO_URI": "mongodb://localhost:27017/", "MONGO_DB": "LibreChat"}
 
 def _load_from_json():
-    """Baca konfigurasi default dari JSON jika ada."""
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             cfg = json.load(f)
@@ -23,7 +21,6 @@ def _load_from_json():
     return "mongodb://localhost:27017/", "LibreChat"  # fallback default
 
 def init_mongo(app):
-    """Dipanggil sekali dari app.py untuk membuat 1 koneksi Mongo."""
     global _client, _db
 
     uri = app.config.get("MONGO_URI")
@@ -44,7 +41,6 @@ def init_mongo(app):
         _client, _db = None, None
 
 def get_db():
-    """Ambil handle DB yang sama, tanpa buka koneksi baru."""
     global _client, _db
     if _db is None:
         try:
@@ -57,14 +53,12 @@ def get_db():
     return _db
 
 def get_col(name: str):
-    """Helper ambil collection. Return None kalau DB tidak tersedia."""
     db = get_db()
     if db is None:
         return None
     return db[name]
 
 def reload_mongo(app, new_uri: str, new_dbname: str):
-    """Dipakai di halaman Settings saat user klik 'Apply'."""
     global _client, _db
     try:
         _client = MongoClient(new_uri, serverSelectionTimeoutMS=3000)

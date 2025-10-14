@@ -16,8 +16,7 @@ def db_exists(uri, dbname):
         return False
 
 
-def load_db_config():
-    """Load konfigurasi MongoDB dari file JSON dengan fallback default."""
+def load_db_config():    
     if not os.path.exists(CONFIG_FILE):
         return {"MONGO_URI": "mongodb://localhost:27017/", "MONGO_DB": "LibreChat"}
     try:
@@ -27,8 +26,7 @@ def load_db_config():
         return {"MONGO_URI": "mongodb://localhost:27017/", "MONGO_DB": "LibreChat"}
 
 
-def save_db_config(uri: str, dbname: str):
-    """Simpan konfigurasi MongoDB ke file JSON."""
+def save_db_config(uri: str, dbname: str):    
     cfg = {"MONGO_URI": uri, "MONGO_DB": dbname}
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2)

@@ -38,6 +38,7 @@ def _build_query(start_str: str, end_str: str, user_str: str) -> dict:
 def file_monitoring():
     files_col = get_col("files")
     users_col = get_col(current_app.config["USERS_COL"])
+    agents_col = get_col("agents")
 
     # ---- filters & params
     start_str = request.args.get("start", "").strip()
@@ -103,6 +104,10 @@ def file_monitoring():
                 u = users_col.find_one({"_id": doc["user"]}, {"name": 1})
                 if u:
                     user_name = u.get("name")
+            related_agent = None
+            if doc.get("context") == "agents":
+                target_file_id = doc.get("file_id")
+                related_agent = agents_col.find_one({"tool_resources.file_search.file_ids": {"$in": [target_file_id]}})
 
             rows.append({
                 "createdAt": doc.get("createdAt"),
@@ -114,6 +119,7 @@ def file_monitoring():
                 "user_id":   str(doc.get("user")) if doc.get("user") else "",
                 "_id":       str(doc.get("_id")),
                 "file_id":   doc.get("file_id"),
+                "agent":     related_agent.get("name") if related_agent else '-',
             })
 
     # Sort by user name in-memory (karena bukan field di dokumen files)
@@ -131,6 +137,13 @@ def file_monitoring():
                     u = users_col.find_one({"_id": doc["user"]}, {"name": 1})
                     if u:
                         uname = u.get("name")
+                agent_name = "-"
+                if doc.get("context") == "agents":
+                    target_file_id = doc.get("file_id")
+                    related_agent = agents_col.find_one({
+                        "tool_resources.file_search.file_ids": {"$in": [target_file_id]}
+                    })
+                    agent_name = related_agent.get("name") if related_agent else "-"
                 all_rows.append({
                     "createdAt": doc.get("createdAt"),
                     "filename":  doc.get("filename"),
@@ -139,6 +152,7 @@ def file_monitoring():
                     "user":      uname or (str(doc.get("user")) if doc.get("user") else None),
                     "_id":       str(doc.get("_id")),
                     "file_id":   doc.get("file_id"),
+                    "agent":     agent_name,
                 })
         if sort_key == "user":
             all_rows.sort(key=lambda r: (r["user"] or "").lower(), reverse=(sort_ord == "desc"))
@@ -146,7 +160,7 @@ def file_monitoring():
         wb = Workbook()
         ws = wb.active
         ws.title = "files"
-        headers = ["createdAt", "filename", "type", "size(bytes)", "user", "_id", "file_id"]
+        headers = ["createdAt", "filename", "type", "size(bytes)", "uploadedBy", "agent"]
         ws.append(headers)
         for r in all_rows:
             ws.append([
@@ -155,8 +169,9 @@ def file_monitoring():
                 r["type"] or "",
                 r["size"] or 0,
                 r["user"] or "",
-                r["_id"] or "",
-                r["file_id"] or "",
+                # r["_id"] or "",
+                # r["file_id"] or "",
+                r["agent"] or "",
             ])
         stream = BytesIO()
         wb.save(stream)
