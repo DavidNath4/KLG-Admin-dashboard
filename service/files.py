@@ -212,7 +212,7 @@ def file_monitoring():
         # Handle Excel export
         if request.args.get("export") == "1":
             try:
-                return _export_excel(files_col, users_col, agents_col, query, mongo_sort, sort_dir, 
+                return _export_excel(files_col, users_col, agents_col, convos_col, query, mongo_sort, sort_dir, 
                                    sort_key, sort_ord, start_str, end_str, user_str)
             except Exception as e:
                 current_app.logger.error(f"[Files] Excel export error: {e}")
@@ -264,7 +264,7 @@ def file_monitoring():
         )
 
 
-def _export_excel(files_col, users_col, agents_col, query, mongo_sort, sort_dir, 
+def _export_excel(files_col, users_col, agents_col, convos_col, query, mongo_sort, sort_dir, 
                  sort_key, sort_ord, start_str, end_str, user_str):
     """Export files to Excel with error handling"""
     try:
@@ -284,6 +284,7 @@ def _export_excel(files_col, users_col, agents_col, query, mongo_sort, sort_dir,
                                 current_app.logger.warning(f"[Files] Export user lookup error: {e}")
 
                         agent_name = "-"
+                        related_agent = None
                         try:
                             if doc.get("context") == "agents":
                                 target_file_id = doc.get("file_id")
@@ -291,7 +292,17 @@ def _export_excel(files_col, users_col, agents_col, query, mongo_sort, sort_dir,
                                     related_agent = agents_col.find_one({
                                         "tool_resources.file_search.file_ids": {"$in": [target_file_id]}
                                     })
-                                    agent_name = related_agent.get("name") if related_agent else "-"
+                            
+                            # Check conversation files
+                            file_id = doc.get("file_id")
+                            if file_id and convos_col is not None:
+                                conversation_with_file = convos_col.find_one({"files": {"$in": [file_id]}})
+                                if conversation_with_file and agents_col is not None:
+                                    related_agent = agents_col.find_one({
+                                        "id": conversation_with_file.get("agent_id")
+                                    })
+                            
+                            agent_name = related_agent.get("name") if related_agent else "-"
                         except PyMongoError as e:
                             current_app.logger.warning(f"[Files] Export agent lookup error: {e}")
 
