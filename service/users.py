@@ -124,8 +124,8 @@ def change_role(id):
             return redirect(url_for("users.admin_users"))
             
         # Validate role value
-        allowed_roles = {"user", "admin", "moderator"}  # Add your allowed roles
-        if new_role.lower() not in allowed_roles:
+        allowed_roles = {"USER", "ADMIN"}  
+        if new_role.upper() not in allowed_roles:
             current_app.logger.warning(f"[Users] Invalid role attempted: {new_role}")
             flash(f"Invalid role. Allowed roles: {', '.join(allowed_roles)}", "danger")
             return redirect(url_for("users.admin_users"))
@@ -150,7 +150,7 @@ def change_role(id):
                 {"_id": user_id},
                 {
                     "$set": {
-                        "role": new_role.lower(),
+                        "role": new_role.upper(),
                         "updatedAt": datetime.utcnow()
                     }
                 }
