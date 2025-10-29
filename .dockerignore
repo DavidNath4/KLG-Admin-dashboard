@@ -1,19 +1,9 @@
-# Virtual env
-venv/
-ENV/
-env/
-
-# Python cache
-__pycache__/
+.git
+__pycache__
 *.pyc
-*.pyo
-*.pyd
-
-# Git & IDE
-.git/
+.env
+venv/
+.amazonq/
+project_review/
+*.md
 .gitignore
-.vscode/
-.idea/
-
-# System files
-.DS_Store

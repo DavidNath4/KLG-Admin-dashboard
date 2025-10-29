@@ -100,8 +100,10 @@ def create_app():
     # Route home
     app.add_url_rule("/", "home", home)
 
-    
-
+    # Health check endpoint
+    @app.route('/health')
+    def health_check():
+        return {'status': 'healthy'}, 200
 
     return app
 
