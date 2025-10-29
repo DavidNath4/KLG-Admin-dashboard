@@ -20,6 +20,11 @@ RUN apk add --no-cache --virtual .build-deps \
 # App source
 COPY . .
 
+# Compile Python files to bytecode and remove source files
+RUN python -m compileall -b . && \
+    find . -name "*.py" -not -path "./venv/*" -delete && \
+    find . -name "__pycache__" -exec rm -rf {} + || true
+
 EXPOSE 3000
 
 # Gunicorn via /bin/sh agar ${PORT} bisa diexpand,
