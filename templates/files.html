@@ -85,7 +85,7 @@
   <!-- 📄 Table -->
   <div class="card bg-dark border-secondary">
     <div class="card-body table-responsive">
-      <table class="table table-dark table-hover align-middle">
+      <table class="table table-dark table-hover align-middle table-smaller">
         <thead>
           <tr>
             <th>#</th>
@@ -105,7 +105,7 @@
             <th>
               <a class="link-light text-decoration-none"
                  href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='type', o=new_o, page=1, per_page=per_page) }}">
-                Type {% if s == 'type' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+                File Type {% if s == 'type' %}<small class="text-secondary">({{ o }})</small>{% endif %}
               </a>
             </th>
             <th class="text-end">
@@ -118,7 +118,7 @@
             <th>
               <a class="link-light text-decoration-none"
                  href="{{ url_for('files.file_monitoring', start=start, end=end, user=user, s='user', o=new_o, page=1, per_page=per_page) }}">
-                Uploaded by {% if s == 'user' %}<small class="text-secondary">({{ o }})</small>{% endif %}
+                Upload by {% if s == 'user' %}<small class="text-secondary">({{ o }})</small>{% endif %}
               </a>
             </th>
           </tr>
@@ -132,8 +132,8 @@
               <td class="fw-semibold">{{ r.filename or '-' }}</td>
               <td><code>{{ r.type or '-' }}</code></td>
               <td class="text-end">{{ r.size_h or '-' }}</td>
-              <td>{{ r.agent or '-' }}</td>
-              <td>{{ r.user or '-' }}</td>
+              <td>{{ r.agent or '-' }}</td>              
+              <td class="fw-bold">{{ r.user or '-' }}</td>
             </tr>
             {% endfor %}
           {% else %}

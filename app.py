@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from flask import Flask, redirect, url_for, request, session
+from flask import Flask, redirect, url_for, request, session, flash
+from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 import os
 
@@ -34,6 +35,17 @@ def create_app():
     )
 
     app.secret_key = os.getenv("SECRET_KEY", "super-secret")
+    
+    # Initialize CSRF Protection
+    csrf = CSRFProtect(app)
+    
+    # CSRF Error Handler
+    @app.errorhandler(400)
+    def handle_csrf_error(e):
+        if e.description == "The CSRF token is missing." or "CSRF" in str(e.description):
+            flash("Security token expired. Please try again.", "danger")
+            return redirect(request.url or url_for("auth.login"))
+        return e
 
     # Load config Mongo dari JSON
     cfg = load_db_config()

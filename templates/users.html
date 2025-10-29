@@ -63,6 +63,7 @@
           <td><span class="badge text-bg-secondary">{{ u.role or u['role'] or 'user' }}</span></td>
           <td>
             <form method="post" action="{{ url_for('users.change_role', id=u._id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               {% set r = ((u.role if 'role' in u else u.get('role')) or u.get('role') or '').upper() %}
               <div class="input-group">
                 <select class="form-select" name="role" required>    

@@ -12,6 +12,7 @@
 <div class="card mb-4">
   <div class="card-body">
     <form method="post" class="row gy-2 gx-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="col-12 col-md-6">
         <label class="form-label">Category Name</label>
         <input class="form-control" type="text" name="name" placeholder="e.g. Aftersales" required>
@@ -61,12 +62,15 @@
           <td>
             {% if c.custom or c['custom'] %}
               <form class="d-inline" method="post" action="{{ url_for('categories.move_category', id=c._id, direction='up') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button class="btn btn-sm btn-outline-light" title="Up">⬆</button>
               </form>
               <form class="d-inline" method="post" action="{{ url_for('categories.move_category', id=c._id, direction='down') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button class="btn btn-sm btn-outline-light" title="Down">⬇</button>
               </form>
               <form class="d-inline" method="post" action="{{ url_for('categories.delete_category', id=c._id) }}" onsubmit="return confirm('Delete this category?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
               </form>
             {% else %}

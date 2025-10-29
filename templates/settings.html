@@ -6,6 +6,7 @@
 <div class="card mb-4">
   <div class="card-body">
     <form method="post" class="row gy-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
       <div class="col-12">
         <label class="form-label">MONGO_URI</label>
         <input class="form-control" type="text" name="MONGO_URI"

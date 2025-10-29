@@ -17,3 +17,6 @@
     background-color: rgba(0, 123, 255, 0.25) !important;
   }
   
+  .table-smaller {
+    font-size: 0.85rem !important;
+  }
