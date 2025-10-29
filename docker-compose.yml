@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   klg-admin:
     image: klg-chatbot-admin-dashboard:latest
