@@ -1,5 +1,6 @@
 services:
   klg-admin:
+    container_name: klg-admin-dashboard
     image: klg-chatbot-admin-dashboard:latest
     build:
       context: .
